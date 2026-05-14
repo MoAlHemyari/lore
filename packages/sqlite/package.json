@@ -1,0 +1,9 @@
+{
+  "name": "@lore/sqlite",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@lore/core": "workspace:*"
+  }
+}

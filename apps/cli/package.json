@@ -1,0 +1,10 @@
+{
+  "name": "@lore/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@lore/core": "workspace:*",
+    "@lore/sqlite": "workspace:*"
+  }
+}

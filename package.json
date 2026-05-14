@@ -1,0 +1,16 @@
+{
+  "name": "lore",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "type": "module",
+  "dependencies": {
+    "typescript": "^6.0.3"
+  }
+}
