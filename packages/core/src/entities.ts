@@ -4,7 +4,7 @@ interface BaseCoreEntityOptions {
   updatedAt: Date | null
 }
 
-export const questKinds = { MAIN: "main", SIDE: "side" } as const;
+export const questKinds = { MAIN: "main", SIDE: "side" } as const
 export type QuestKind = (typeof questKinds)[keyof typeof questKinds]
 
 export const questLifecycleStatuses = {
@@ -14,7 +14,7 @@ export const questLifecycleStatuses = {
   ABANDONED: "abandoned",
   COMPLETED: "completed",
   REMOVED: "removed"
-} as const;
+} as const
 export type QuestLifecycleStatus = (typeof questLifecycleStatuses)[keyof typeof questLifecycleStatuses]
 
 export interface QuestDraft extends BaseCoreEntityOptions {

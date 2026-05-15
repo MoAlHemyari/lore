@@ -9,15 +9,15 @@ const questActionErrors = {
   STATUS_ALREADY_REMOVED: "The quest has already been removed.",
   STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED: "A quest cannot be initialized with a status of removed.",
   STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED: "A quest cannot be initialized with a status of idled."
-} as const;
-export type QuestActionError = keyof typeof questActionErrors;
+} as const
+export type QuestActionError = keyof typeof questActionErrors
 
 const noteActionErrors = {
   TEXT_REQUIRED: "A note must have text."
-} as const;
-export type NoteActionError = keyof typeof noteActionErrors;
+} as const
+export type NoteActionError = keyof typeof noteActionErrors
 
 const progressActionErrors = {
   PROGRESS_TEXT_REQUIRED: "Progress text cannot be empty."
-} as const;
-export type ProgressActionError = keyof typeof progressActionErrors;
+} as const
+export type ProgressActionError = keyof typeof progressActionErrors

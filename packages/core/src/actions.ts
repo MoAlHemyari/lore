@@ -9,8 +9,8 @@ import {
   type Progress,
   questLifecycleStatuses,
   questKinds
-} from "./entities";
-import type { NoteActionError, ProgressActionError, QuestActionError } from "./errors";
+} from "./entities"
+import type { NoteActionError, ProgressActionError, QuestActionError } from "./errors"
 
 const actionKinds = [
   // quest actions
@@ -40,15 +40,15 @@ type ActionKind = (typeof actionKinds)[number]
 
 type ActionResult<T, E> =
   | {
-    ok: true
-    action: ActionKind
-    value: T
-  }
+      ok: true
+      action: ActionKind
+      value: T
+    }
   | {
-    ok: false
-    action: ActionKind
-    error: E
-  }
+      ok: false
+      action: ActionKind
+      error: E
+    }
 
 export function createQuest(
   title: Quest["title"],
@@ -56,7 +56,7 @@ export function createQuest(
   status: QuestLifecycleStatus = "active",
   description: Quest["description"] = ""
 ): ActionResult<QuestDraft, QuestActionError> {
-  const t = title.trim();
+  const t = title.trim()
   if (t.length === 0) return { ok: false, action: "quest_create", error: "TITLE_REQUIRED" }
 
   if (!(kind.toLocaleUpperCase() in questKinds))
@@ -93,8 +93,11 @@ export function createQuest(
   return { ok: true, action: "quest_create", value: createdQuest }
 }
 
-export function updateQuestTitle(quest: Quest, newTitle: Quest["title"]): ActionResult<Quest, QuestActionError> {
-  const t = newTitle.trim();
+export function updateQuestTitle(
+  quest: Quest,
+  newTitle: Quest["title"]
+): ActionResult<Quest, QuestActionError> {
+  const t = newTitle.trim()
   if (t.length === 0) return { ok: false, action: "quest_update_title", error: "TITLE_REQUIRED" }
 
   const updatedQuest: Quest = {
@@ -106,8 +109,11 @@ export function updateQuestTitle(quest: Quest, newTitle: Quest["title"]): Action
   return { ok: true, action: "quest_update_title", value: updatedQuest }
 }
 
-export function updateQuestDescription(quest: Quest, newDescription: Quest["description"]): ActionResult<Quest, QuestActionError> {
-  const t = newDescription.trim();
+export function updateQuestDescription(
+  quest: Quest,
+  newDescription: Quest["description"]
+): ActionResult<Quest, QuestActionError> {
+  const t = newDescription.trim()
 
   const updatedQuest: Quest = {
     ...quest,
@@ -120,7 +126,6 @@ export function updateQuestDescription(quest: Quest, newDescription: Quest["desc
 
 export function pauseQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
   if (quest.pausedAt) return { ok: false, action: "quest_pause", error: "STATUS_ALREADY_PAUSED" }
-
 
   const updatedQuest: Quest = {
     ...quest,
@@ -141,7 +146,6 @@ export function pauseQuest(quest: Quest): ActionResult<Quest, QuestActionError> 
 export function abandonQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
   if (quest.abandonedAt) return { ok: false, action: "quest_abandon", error: "STATUS_ALREADY_COMPLETED" }
 
-
   const updatedQuest: Quest = {
     ...quest,
     status: questLifecycleStatuses.ABANDONED,
@@ -160,7 +164,6 @@ export function abandonQuest(quest: Quest): ActionResult<Quest, QuestActionError
 
 export function completeQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
   if (quest.completedAt) return { ok: false, action: "quest_complete", error: "STATUS_ALREADY_COMPLETED" }
-
 
   const updatedQuest: Quest = {
     ...quest,
@@ -228,7 +231,10 @@ export function restoreQuest(quest: Quest): ActionResult<Quest, QuestActionError
   return { ok: true, action: "quest_restore", value: updatedQuest }
 }
 
-export function createNote(questId: Quest["id"], text: Note["text"]): ActionResult<NoteDraft, NoteActionError> {
+export function createNote(
+  questId: Quest["id"],
+  text: Note["text"]
+): ActionResult<NoteDraft, NoteActionError> {
   const t = text.trim()
 
   if (t.length === 0) return { ok: false, action: "note_create", error: "TEXT_REQUIRED" }
@@ -249,7 +255,6 @@ export function updateNote(note: Note, text: NoteDraft["text"]): ActionResult<No
   const t = text.trim()
 
   if (t.length === 0) return { ok: false, action: "note_update", error: "TEXT_REQUIRED" }
-
 
   const updatedNote: Note = { ...note, text: t }
 
@@ -274,10 +279,12 @@ export function restoreNote(note: Note): ActionResult<Note, NoteActionError> {
   return { ok: true, action: "note_restore", value: updatedNote }
 }
 
-export function createProgress(questId: Quest["id"], text: ProgressDraft["text"]): ActionResult<ProgressDraft, ProgressActionError> {
+export function createProgress(
+  questId: Quest["id"],
+  text: ProgressDraft["text"]
+): ActionResult<ProgressDraft, ProgressActionError> {
   const t = text.trim()
   if (t.length === 0) return { ok: false, action: "progress_create", error: "PROGRESS_TEXT_REQUIRED" }
-
 
   const createdProgress: ProgressDraft = {
     questId,
@@ -291,7 +298,10 @@ export function createProgress(questId: Quest["id"], text: ProgressDraft["text"]
   return { ok: true, action: "progress_create", value: createdProgress }
 }
 
-export function updateProgress(progress: Progress, text: Progress["text"]): ActionResult<Progress, ProgressActionError> {
+export function updateProgress(
+  progress: Progress,
+  text: Progress["text"]
+): ActionResult<Progress, ProgressActionError> {
   const t = text.trim()
   if (t.length === 0) return { ok: false, action: "progress_update", error: "PROGRESS_TEXT_REQUIRED" }
 
