@@ -62,10 +62,14 @@ export function createQuest(
   if (!(kind.toLocaleUpperCase() in questKinds))
     return { ok: false, action: "quest_create", error: "KIND_INVALID" }
 
-
   if (!(status.toLocaleUpperCase() in questLifecycleStatuses))
     return { ok: false, action: "quest_create", error: "STATUS_INVALID" }
 
+  if (status === "removed")
+    return { ok: false, action: "quest_create", error: "STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED" }
+
+  if (status === "idle")
+    return { ok: false, action: "quest_create", error: "STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED" }
 
   const createdQuest: QuestDraft = {
     title: t,
