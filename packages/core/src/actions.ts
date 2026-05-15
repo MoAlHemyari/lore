@@ -10,7 +10,7 @@ import {
   questLifecycleStatuses,
   questKinds
 } from "./entities"
-import type { NoteActionError, ProgressActionError, QuestActionError } from "./errors"
+import { allErrorCodes, type ErrorCode } from "./errors"
 
 const actionKinds = [
   // quest actions
@@ -55,21 +55,30 @@ export function createQuest(
   kind: QuestKind = "main",
   status: QuestLifecycleStatus = "active",
   description: Quest["description"] = ""
-): ActionResult<QuestDraft, QuestActionError> {
+): ActionResult<QuestDraft, ErrorCode> {
   const t = title.trim()
-  if (t.length === 0) return { ok: false, action: "quest_create", error: "TITLE_REQUIRED" }
+  if (t.length === 0)
+    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_TITLE_REQUIRED"] }
 
   if (!(kind.toLocaleUpperCase() in questKinds))
-    return { ok: false, action: "quest_create", error: "KIND_INVALID" }
+    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_KIND_INVALID"] }
 
   if (!(status.toLocaleUpperCase() in questLifecycleStatuses))
-    return { ok: false, action: "quest_create", error: "STATUS_INVALID" }
+    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_STATUS_INVALID"] }
 
   if (status === "removed")
-    return { ok: false, action: "quest_create", error: "STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED" }
+    return {
+      ok: false,
+      action: "quest_create",
+      error: allErrorCodes["QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED"]
+    }
 
   if (status === "idle")
-    return { ok: false, action: "quest_create", error: "STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED" }
+    return {
+      ok: false,
+      action: "quest_create",
+      error: allErrorCodes["QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED"]
+    }
 
   const createdQuest: QuestDraft = {
     title: t,
@@ -93,12 +102,10 @@ export function createQuest(
   return { ok: true, action: "quest_create", value: createdQuest }
 }
 
-export function updateQuestTitle(
-  quest: Quest,
-  newTitle: Quest["title"]
-): ActionResult<Quest, QuestActionError> {
+export function updateQuestTitle(quest: Quest, newTitle: Quest["title"]): ActionResult<Quest, ErrorCode> {
   const t = newTitle.trim()
-  if (t.length === 0) return { ok: false, action: "quest_update_title", error: "TITLE_REQUIRED" }
+  if (t.length === 0)
+    return { ok: false, action: "quest_update_title", error: allErrorCodes["QUEST_TITLE_REQUIRED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -112,7 +119,7 @@ export function updateQuestTitle(
 export function updateQuestDescription(
   quest: Quest,
   newDescription: Quest["description"]
-): ActionResult<Quest, QuestActionError> {
+): ActionResult<Quest, ErrorCode> {
   const t = newDescription.trim()
 
   const updatedQuest: Quest = {
@@ -124,8 +131,9 @@ export function updateQuestDescription(
   return { ok: true, action: "quest_update_description", value: updatedQuest }
 }
 
-export function pauseQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
-  if (quest.pausedAt) return { ok: false, action: "quest_pause", error: "STATUS_ALREADY_PAUSED" }
+export function pauseQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
+  if (quest.pausedAt)
+    return { ok: false, action: "quest_pause", error: allErrorCodes["QUEST_STATUS_ALREADY_PAUSED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -143,8 +151,9 @@ export function pauseQuest(quest: Quest): ActionResult<Quest, QuestActionError> 
   return { ok: true, action: "quest_pause", value: updatedQuest }
 }
 
-export function abandonQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
-  if (quest.abandonedAt) return { ok: false, action: "quest_abandon", error: "STATUS_ALREADY_COMPLETED" }
+export function abandonQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
+  if (quest.abandonedAt)
+    return { ok: false, action: "quest_abandon", error: allErrorCodes["QUEST_STATUS_ALREADY_ABANDONED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -162,8 +171,9 @@ export function abandonQuest(quest: Quest): ActionResult<Quest, QuestActionError
   return { ok: true, action: "quest_abandon", value: updatedQuest }
 }
 
-export function completeQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
-  if (quest.completedAt) return { ok: false, action: "quest_complete", error: "STATUS_ALREADY_COMPLETED" }
+export function completeQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
+  if (quest.completedAt)
+    return { ok: false, action: "quest_complete", error: allErrorCodes["QUEST_STATUS_ALREADY_COMPLETED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -181,8 +191,9 @@ export function completeQuest(quest: Quest): ActionResult<Quest, QuestActionErro
   return { ok: true, action: "quest_complete", value: updatedQuest }
 }
 
-export function idleQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
-  if (quest.idledAt) return { ok: false, action: "quest_idle", error: "STATUS_ALREADY_IDLED" }
+export function idleQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
+  if (quest.idledAt)
+    return { ok: false, action: "quest_idle", error: allErrorCodes["QUEST_STATUS_ALREADY_IDLED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -200,8 +211,9 @@ export function idleQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
   return { ok: true, action: "quest_idle", value: updatedQuest }
 }
 
-export function removeQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
-  if (quest.removedAt) return { ok: false, action: "quest_remove", error: "STATUS_ALREADY_REMOVED" }
+export function removeQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
+  if (quest.removedAt)
+    return { ok: false, action: "quest_remove", error: allErrorCodes["QUEST_STATUS_ALREADY_REMOVED"] }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -219,7 +231,7 @@ export function removeQuest(quest: Quest): ActionResult<Quest, QuestActionError>
   return { ok: true, action: "quest_remove", value: updatedQuest }
 }
 
-export function restoreQuest(quest: Quest): ActionResult<Quest, QuestActionError> {
+export function restoreQuest(quest: Quest): ActionResult<Quest, ErrorCode> {
   const updatedQuest: Quest = {
     ...quest,
     status: questLifecycleStatuses.ACTIVE,
@@ -231,13 +243,10 @@ export function restoreQuest(quest: Quest): ActionResult<Quest, QuestActionError
   return { ok: true, action: "quest_restore", value: updatedQuest }
 }
 
-export function createNote(
-  questId: Quest["id"],
-  text: Note["text"]
-): ActionResult<NoteDraft, NoteActionError> {
+export function createNote(questId: Quest["id"], text: Note["text"]): ActionResult<NoteDraft, ErrorCode> {
   const t = text.trim()
 
-  if (t.length === 0) return { ok: false, action: "note_create", error: "TEXT_REQUIRED" }
+  if (t.length === 0) return { ok: false, action: "note_create", error: allErrorCodes["NOTE_TEXT_REQUIRED"] }
 
   const createdNote: NoteDraft = {
     questId,
@@ -251,17 +260,17 @@ export function createNote(
   return { ok: true, action: "note_create", value: createdNote }
 }
 
-export function updateNote(note: Note, text: NoteDraft["text"]): ActionResult<Note, NoteActionError> {
+export function updateNote(note: Note, text: NoteDraft["text"]): ActionResult<Note, ErrorCode> {
   const t = text.trim()
 
-  if (t.length === 0) return { ok: false, action: "note_update", error: "TEXT_REQUIRED" }
+  if (t.length === 0) return { ok: false, action: "note_update", error: allErrorCodes["NOTE_TEXT_REQUIRED"] }
 
   const updatedNote: Note = { ...note, text: t }
 
   return { ok: true, action: "note_update", value: updatedNote }
 }
 
-export function removeNote(note: Note): ActionResult<Note, NoteActionError> {
+export function removeNote(note: Note): ActionResult<Note, ErrorCode> {
   const updatedNote: Note = {
     ...note,
     removedAt: new Date(),
@@ -270,7 +279,7 @@ export function removeNote(note: Note): ActionResult<Note, NoteActionError> {
   return { ok: true, action: "note_remove", value: updatedNote }
 }
 
-export function restoreNote(note: Note): ActionResult<Note, NoteActionError> {
+export function restoreNote(note: Note): ActionResult<Note, ErrorCode> {
   const updatedNote: Note = {
     ...note,
     removedAt: null,
@@ -282,9 +291,10 @@ export function restoreNote(note: Note): ActionResult<Note, NoteActionError> {
 export function createProgress(
   questId: Quest["id"],
   text: ProgressDraft["text"]
-): ActionResult<ProgressDraft, ProgressActionError> {
+): ActionResult<ProgressDraft, ErrorCode> {
   const t = text.trim()
-  if (t.length === 0) return { ok: false, action: "progress_create", error: "PROGRESS_TEXT_REQUIRED" }
+  if (t.length === 0)
+    return { ok: false, action: "progress_create", error: allErrorCodes["PROGRESS_TEXT_REQUIRED"] }
 
   const createdProgress: ProgressDraft = {
     questId,
@@ -301,9 +311,10 @@ export function createProgress(
 export function updateProgress(
   progress: Progress,
   text: Progress["text"]
-): ActionResult<Progress, ProgressActionError> {
+): ActionResult<Progress, ErrorCode> {
   const t = text.trim()
-  if (t.length === 0) return { ok: false, action: "progress_update", error: "PROGRESS_TEXT_REQUIRED" }
+  if (t.length === 0)
+    return { ok: false, action: "progress_update", error: allErrorCodes["PROGRESS_TEXT_REQUIRED"] }
 
   const updatedProgress: Note = {
     ...progress,
@@ -313,7 +324,7 @@ export function updateProgress(
   return { ok: true, action: "progress_update", value: updatedProgress }
 }
 
-export function removeProgress(progress: Progress): ActionResult<Progress, ProgressActionError> {
+export function removeProgress(progress: Progress): ActionResult<Progress, ErrorCode> {
   const updatedProgress: Progress = {
     ...progress,
     removedAt: new Date(),
@@ -323,7 +334,7 @@ export function removeProgress(progress: Progress): ActionResult<Progress, Progr
   return { ok: true, action: "progress_remove", value: updatedProgress }
 }
 
-export function restoreProgress(progress: Progress): ActionResult<Progress, ProgressActionError> {
+export function restoreProgress(progress: Progress): ActionResult<Progress, ErrorCode> {
   const updatedProgress: Progress = {
     ...progress,
     removedAt: null,
