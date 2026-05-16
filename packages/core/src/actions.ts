@@ -10,7 +10,7 @@ import {
   questLifecycleStatuses,
   questKinds
 } from "./entities"
-import { allErrorCodes, type ErrorCode } from "./errors"
+import { type ErrorCode } from "./errors"
 
 const actionKinds = [
   // quest actions
@@ -57,27 +57,26 @@ export function createQuest(
   description: Quest["description"] = ""
 ): ActionResult<QuestDraft, ErrorCode> {
   const t = title.trim()
-  if (t.length === 0)
-    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_TITLE_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "quest_create", error: "QUEST_TITLE_REQUIRED" }
 
   if (!(kind.toLocaleUpperCase() in questKinds))
-    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_KIND_INVALID"] }
+    return { ok: false, action: "quest_create", error: "QUEST_KIND_INVALID" }
 
   if (!(status.toLocaleUpperCase() in questLifecycleStatuses))
-    return { ok: false, action: "quest_create", error: allErrorCodes["QUEST_STATUS_INVALID"] }
+    return { ok: false, action: "quest_create", error: "QUEST_STATUS_INVALID" }
 
   if (status === "removed")
     return {
       ok: false,
       action: "quest_create",
-      error: allErrorCodes["QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED"]
+      error: "QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_REMOVED"
     }
 
   if (status === "idle")
     return {
       ok: false,
       action: "quest_create",
-      error: allErrorCodes["QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED"]
+      error: "QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED"
     }
 
   const createdQuest: QuestDraft = {
@@ -104,8 +103,7 @@ export function createQuest(
 
 export function updateQuestTitle(quest: Quest, newTitle: Quest["title"]): ActionResult<Quest, ErrorCode> {
   const t = newTitle.trim()
-  if (t.length === 0)
-    return { ok: false, action: "quest_update_title", error: allErrorCodes["QUEST_TITLE_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "quest_update_title", error: "QUEST_TITLE_REQUIRED" }
 
   const updatedQuest: Quest = {
     ...quest,
@@ -136,7 +134,7 @@ export function markQuestPaused(quest: Quest): ActionResult<Quest, ErrorCode> {
     return {
       ok: false,
       action: "quest_mark_paused",
-      error: allErrorCodes["QUEST_STATUS_ALREADY_PAUSED"]
+      error: "QUEST_STATUS_ALREADY_PAUSED"
     }
 
   const updatedQuest: Quest = {
@@ -160,7 +158,7 @@ export function markQuestAbandoned(quest: Quest): ActionResult<Quest, ErrorCode>
     return {
       ok: false,
       action: "quest_mark_abandoned",
-      error: allErrorCodes["QUEST_STATUS_ALREADY_ABANDONED"]
+      error: "QUEST_STATUS_ALREADY_ABANDONED"
     }
 
   const updatedQuest: Quest = {
@@ -184,7 +182,7 @@ export function markQuestCompleted(quest: Quest): ActionResult<Quest, ErrorCode>
     return {
       ok: false,
       action: "quest_mark_completed",
-      error: allErrorCodes["QUEST_STATUS_ALREADY_COMPLETED"]
+      error: "QUEST_STATUS_ALREADY_COMPLETED"
     }
 
   const updatedQuest: Quest = {
@@ -208,7 +206,7 @@ export function markQuestIdle(quest: Quest): ActionResult<Quest, ErrorCode> {
     return {
       ok: false,
       action: "quest_mark_idle",
-      error: allErrorCodes["QUEST_STATUS_ALREADY_IDLED"]
+      error: "QUEST_STATUS_ALREADY_IDLED"
     }
 
   const updatedQuest: Quest = {
@@ -232,7 +230,7 @@ export function markQuestRemoved(quest: Quest): ActionResult<Quest, ErrorCode> {
     return {
       ok: false,
       action: "quest_mark_removed",
-      error: allErrorCodes["QUEST_STATUS_ALREADY_REMOVED"]
+      error: "QUEST_STATUS_ALREADY_REMOVED"
     }
 
   const updatedQuest: Quest = {
@@ -266,7 +264,7 @@ export function markQuestActive(quest: Quest): ActionResult<Quest, ErrorCode> {
 export function createNote(questId: Quest["id"], text: Note["text"]): ActionResult<NoteDraft, ErrorCode> {
   const t = text.trim()
 
-  if (t.length === 0) return { ok: false, action: "note_create", error: allErrorCodes["NOTE_TEXT_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "note_create", error: "NOTE_TEXT_REQUIRED" }
 
   const createdNote: NoteDraft = {
     questId,
@@ -283,7 +281,7 @@ export function createNote(questId: Quest["id"], text: Note["text"]): ActionResu
 export function updateNote(note: Note, text: NoteDraft["text"]): ActionResult<Note, ErrorCode> {
   const t = text.trim()
 
-  if (t.length === 0) return { ok: false, action: "note_update", error: allErrorCodes["NOTE_TEXT_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "note_update", error: "NOTE_TEXT_REQUIRED" }
 
   const updatedNote: Note = { ...note, text: t }
 
@@ -313,8 +311,7 @@ export function createProgress(
   text: ProgressDraft["text"]
 ): ActionResult<ProgressDraft, ErrorCode> {
   const t = text.trim()
-  if (t.length === 0)
-    return { ok: false, action: "progress_create", error: allErrorCodes["PROGRESS_TEXT_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "progress_create", error: "PROGRESS_TEXT_REQUIRED" }
 
   const createdProgress: ProgressDraft = {
     questId,
@@ -333,8 +330,7 @@ export function updateProgress(
   text: Progress["text"]
 ): ActionResult<Progress, ErrorCode> {
   const t = text.trim()
-  if (t.length === 0)
-    return { ok: false, action: "progress_update", error: allErrorCodes["PROGRESS_TEXT_REQUIRED"] }
+  if (t.length === 0) return { ok: false, action: "progress_update", error: "PROGRESS_TEXT_REQUIRED" }
 
   const updatedProgress: Note = {
     ...progress,
