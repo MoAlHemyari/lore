@@ -33,7 +33,7 @@ export interface Quest extends BaseCoreEntity {
 }
 
 export interface Note extends BaseCoreEntity {
-  questId: Quest["id"]
+  questId: Quest["id"] | null
   text: string
 }
 

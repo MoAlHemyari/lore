@@ -444,10 +444,29 @@ describe("quest actions", () => {
 
 describe("note actions", () => {
   describe("createNote", () => {
-    test("creates a note with untrimmed text value", () => {
+    test("creates a note with a quest id and untrimmed text value", () => {
       const noteId = crypto.randomUUID()
       const questId = crypto.randomUUID()
-      const result = createNote(noteId, questId, "  note text  ")
+      const result = createNote(noteId, "  note text  ", questId)
+
+      expect(result.ok).toBe(true)
+      expect(result.action).toBe("note_create")
+
+      // ts narrowing
+      if (!result.ok) throw new Error("Expected createNote to succeed")
+
+      expect(result.value.id).toBe(noteId)
+      expect(result.value.questId).toBe(questId)
+      expect(result.value.text).toBe("note text")
+      expect(result.value.createdAt).toBeInstanceOf(Date)
+      expect(result.value.updatedAt).toBeNull()
+      expect(result.value.removedAt).toBeNull()
+    })
+
+    test("creates a note with only an untrimmed text value without quest id", () => {
+      const noteId = crypto.randomUUID()
+      const questId = null
+      const result = createNote(noteId, "  note text  ", questId)
 
       expect(result.ok).toBe(true)
       expect(result.action).toBe("note_create")
@@ -464,7 +483,7 @@ describe("note actions", () => {
     })
 
     test("rejects an invalid note id", () => {
-      const result = createNote("invalid-id", crypto.randomUUID(), "note text")
+      const result = createNote("invalid-id", "note text", crypto.randomUUID())
 
       expect(result).toEqual({
         ok: false,
@@ -474,7 +493,7 @@ describe("note actions", () => {
     })
 
     test("rejects an invalid quest id", () => {
-      const result = createNote(crypto.randomUUID(), "invalid-id", "note text")
+      const result = createNote(crypto.randomUUID(), "note text", "invalid-id")
 
       expect(result).toEqual({
         ok: false,
@@ -484,7 +503,7 @@ describe("note actions", () => {
     })
 
     test("rejects an empty string text value", () => {
-      const result = createNote(crypto.randomUUID(), crypto.randomUUID(), "   ")
+      const result = createNote(crypto.randomUUID(), "   ", crypto.randomUUID())
 
       expect(result).toEqual({
         ok: false,

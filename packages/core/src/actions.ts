@@ -266,12 +266,15 @@ export function markQuestActive(quest: Quest): ActionResult<Quest, ErrorCode> {
 
 export function createNote(
   id: Note["id"],
-  questId: Quest["id"],
-  text: Note["text"]
+  text: Note["text"],
+  questId: Quest["id"] | null
 ): ActionResult<Note, ErrorCode> {
   if (!uuidPattern.test(id)) return { ok: false, action: "note_create", error: "NOTE_ID_INVALID" }
 
-  if (!uuidPattern.test(questId)) return { ok: false, action: "note_create", error: "NOTE_QUEST_ID_INVALID" }
+  if (questId) {
+    if (!uuidPattern.test(questId))
+      return { ok: false, action: "note_create", error: "NOTE_QUEST_ID_INVALID" }
+  }
 
   const t = text.trim()
 
