@@ -1,5 +1,6 @@
 const errorCodes = [
   // quest errors
+  "QUEST_ID_INVALID",
   "QUEST_TITLE_REQUIRED",
   "QUEST_KIND_INVALID",
   "QUEST_STATUS_INVALID",
@@ -12,9 +13,13 @@ const errorCodes = [
   "QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED",
 
   // note errors
+  "NOTE_ID_INVALID",
+  "NOTE_QUEST_ID_INVALID",
   "NOTE_TEXT_REQUIRED",
 
   // progress errors
+  "PROGRESS_ID_INVALID",
+  "PROGRESS_QUEST_ID_INVALID",
   "PROGRESS_TEXT_REQUIRED"
 ] as const
 export type ErrorCode = (typeof errorCodes)[number]

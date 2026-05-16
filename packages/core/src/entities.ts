@@ -1,4 +1,5 @@
-interface BaseCoreEntityOptions {
+interface BaseCoreEntity {
+  id: string
   createdAt: Date
   removedAt: Date | null
   updatedAt: Date | null
@@ -17,7 +18,7 @@ export const questLifecycleStatuses = {
 } as const
 export type QuestLifecycleStatus = (typeof questLifecycleStatuses)[keyof typeof questLifecycleStatuses]
 
-export interface QuestDraft extends BaseCoreEntityOptions {
+export interface Quest extends BaseCoreEntity {
   kind: QuestKind
   title: string
   description: string
@@ -31,24 +32,12 @@ export interface QuestDraft extends BaseCoreEntityOptions {
   completedAt: Date | null
 }
 
-export interface NoteDraft extends BaseCoreEntityOptions {
+export interface Note extends BaseCoreEntity {
   questId: Quest["id"]
   text: string
 }
 
-export interface ProgressDraft extends BaseCoreEntityOptions {
+export interface Progress extends BaseCoreEntity {
   questId: Quest["id"]
   text: string
-}
-
-export interface Quest extends QuestDraft {
-  id: string
-}
-
-export interface Progress extends ProgressDraft {
-  id: string
-}
-
-export interface Note extends NoteDraft {
-  id: string
 }

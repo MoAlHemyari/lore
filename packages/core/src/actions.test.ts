@@ -58,7 +58,8 @@ const createTestProgress = (): Progress => ({
 describe("quest actions", () => {
   describe("createQuest", () => {
     test("creates a quest with untrimmed title value and defaults", () => {
-      const result = createQuest("  Ship the auth refactor  ")
+      const questId = crypto.randomUUID()
+      const result = createQuest(questId, "  quest name  ")
 
       expect(result.ok).toBe(true)
       expect(result.action).toBe("quest_create")
@@ -66,7 +67,8 @@ describe("quest actions", () => {
       // ts narrowing
       if (!result.ok) throw new Error("Expected createQuest to succeed")
 
-      expect(result.value.title).toBe("Ship the auth refactor")
+      expect(result.value.id).toBe(questId)
+      expect(result.value.title).toBe("quest name")
       expect(result.value.kind).toBe("main")
       expect(result.value.status).toBe("active")
       expect(result.value.description).toBe("")
@@ -82,21 +84,33 @@ describe("quest actions", () => {
     })
 
     test("creates a quest with explicit title, kind, status, and description", () => {
-      const result = createQuest("quest title", "side", "paused", "quest description")
+      const questId = crypto.randomUUID()
+      const result = createQuest(questId, "quest title", "side", "paused", "quest description")
 
       expect(result.ok).toBe(true)
 
       // ts narrowing
       if (!result.ok) throw new Error("Expected createQuest to succeed")
 
+      expect(result.value.id).toBe(questId)
       expect(result.value.title).toBe("quest title")
       expect(result.value.kind).toBe("side")
       expect(result.value.status).toBe("paused")
       expect(result.value.description).toBe("quest description")
     })
 
+    test("rejects an invalid id", () => {
+      const result = createQuest("invalid-id", "quest title")
+
+      expect(result).toEqual({
+        ok: false,
+        action: "quest_create",
+        error: "QUEST_ID_INVALID"
+      })
+    })
+
     test("rejects an empty string title value", () => {
-      const result = createQuest("   ")
+      const result = createQuest(crypto.randomUUID(), "   ")
 
       expect(result).toEqual({
         ok: false,
@@ -106,7 +120,7 @@ describe("quest actions", () => {
     })
 
     test("rejects an invalid kind", () => {
-      const result = createQuest("quest title", "epic" as never)
+      const result = createQuest(crypto.randomUUID(), "quest title", "epic" as never)
 
       expect(result).toEqual({
         ok: false,
@@ -116,7 +130,7 @@ describe("quest actions", () => {
     })
 
     test("rejects an invalid status", () => {
-      const result = createQuest("quest title", "main", "sleeping" as never)
+      const result = createQuest(crypto.randomUUID(), "quest title", "main", "sleeping" as never)
 
       expect(result).toEqual({
         ok: false,
@@ -126,7 +140,7 @@ describe("quest actions", () => {
     })
 
     test("rejects idle status", () => {
-      const result = createQuest("quest title", "main", "idle")
+      const result = createQuest(crypto.randomUUID(), "quest title", "main", "idle")
 
       expect(result).toEqual({
         ok: false,
@@ -136,7 +150,7 @@ describe("quest actions", () => {
     })
 
     test("rejects removed status", () => {
-      const result = createQuest("quest title", "main", "removed")
+      const result = createQuest(crypto.randomUUID(), "quest title", "main", "removed")
 
       expect(result).toEqual({
         ok: false,
@@ -431,8 +445,9 @@ describe("quest actions", () => {
 describe("note actions", () => {
   describe("createNote", () => {
     test("creates a note with untrimmed text value", () => {
+      const noteId = crypto.randomUUID()
       const questId = crypto.randomUUID()
-      const result = createNote(questId, "  note text  ")
+      const result = createNote(noteId, questId, "  note text  ")
 
       expect(result.ok).toBe(true)
       expect(result.action).toBe("note_create")
@@ -440,6 +455,7 @@ describe("note actions", () => {
       // ts narrowing
       if (!result.ok) throw new Error("Expected createNote to succeed")
 
+      expect(result.value.id).toBe(noteId)
       expect(result.value.questId).toBe(questId)
       expect(result.value.text).toBe("note text")
       expect(result.value.createdAt).toBeInstanceOf(Date)
@@ -447,8 +463,28 @@ describe("note actions", () => {
       expect(result.value.removedAt).toBeNull()
     })
 
+    test("rejects an invalid note id", () => {
+      const result = createNote("invalid-id", crypto.randomUUID(), "note text")
+
+      expect(result).toEqual({
+        ok: false,
+        action: "note_create",
+        error: "NOTE_ID_INVALID"
+      })
+    })
+
+    test("rejects an invalid quest id", () => {
+      const result = createNote(crypto.randomUUID(), "invalid-id", "note text")
+
+      expect(result).toEqual({
+        ok: false,
+        action: "note_create",
+        error: "NOTE_QUEST_ID_INVALID"
+      })
+    })
+
     test("rejects an empty string text value", () => {
-      const result = createNote(crypto.randomUUID(), "   ")
+      const result = createNote(crypto.randomUUID(), crypto.randomUUID(), "   ")
 
       expect(result).toEqual({
         ok: false,
@@ -523,8 +559,9 @@ describe("note actions", () => {
 describe("progress actions", () => {
   describe("createProgress", () => {
     test("creates a progress with untrimmed text value", () => {
+      const progressId = crypto.randomUUID()
       const questId = crypto.randomUUID()
-      const result = createProgress(questId, "  progress text  ")
+      const result = createProgress(progressId, questId, "  progress text  ")
 
       expect(result.ok).toBe(true)
       expect(result.action).toBe("progress_create")
@@ -532,6 +569,7 @@ describe("progress actions", () => {
       // ts narrowing
       if (!result.ok) throw new Error("Expected createProgress to succeed")
 
+      expect(result.value.id).toBe(progressId)
       expect(result.value.questId).toBe(questId)
       expect(result.value.text).toBe("progress text")
       expect(result.value.createdAt).toBeInstanceOf(Date)
@@ -539,8 +577,28 @@ describe("progress actions", () => {
       expect(result.value.removedAt).toBeNull()
     })
 
+    test("rejects an invalid progress id", () => {
+      const result = createProgress("invalid-id", crypto.randomUUID(), "progress text")
+
+      expect(result).toEqual({
+        ok: false,
+        action: "progress_create",
+        error: "PROGRESS_ID_INVALID"
+      })
+    })
+
+    test("rejects an invalid quest id", () => {
+      const result = createProgress(crypto.randomUUID(), "invalid-id", "progress text")
+
+      expect(result).toEqual({
+        ok: false,
+        action: "progress_create",
+        error: "PROGRESS_QUEST_ID_INVALID"
+      })
+    })
+
     test("rejects an empty string text value", () => {
-      const result = createProgress(crypto.randomUUID(), "   ")
+      const result = createProgress(crypto.randomUUID(), crypto.randomUUID(), "   ")
 
       expect(result).toEqual({
         ok: false,

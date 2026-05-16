@@ -2,10 +2,7 @@ import {
   type Quest,
   type QuestKind,
   type QuestLifecycleStatus,
-  type QuestDraft,
   type Note,
-  type NoteDraft,
-  type ProgressDraft,
   type Progress,
   questLifecycleStatuses,
   questKinds
@@ -50,12 +47,17 @@ type ActionResult<T, E> =
       error: E
     }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export function createQuest(
+  id: Quest["id"],
   title: Quest["title"],
   kind: QuestKind = "main",
   status: QuestLifecycleStatus = "active",
   description: Quest["description"] = ""
-): ActionResult<QuestDraft, ErrorCode> {
+): ActionResult<Quest, ErrorCode> {
+  if (!uuidPattern.test(id)) return { ok: false, action: "quest_create", error: "QUEST_ID_INVALID" }
+
   const t = title.trim()
   if (t.length === 0) return { ok: false, action: "quest_create", error: "QUEST_TITLE_REQUIRED" }
 
@@ -79,7 +81,8 @@ export function createQuest(
       error: "QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED"
     }
 
-  const createdQuest: QuestDraft = {
+  const createdQuest: Quest = {
+    id,
     title: t,
     description,
     kind,
@@ -261,12 +264,21 @@ export function markQuestActive(quest: Quest): ActionResult<Quest, ErrorCode> {
   return { ok: true, action: "quest_mark_active", value: updatedQuest }
 }
 
-export function createNote(questId: Quest["id"], text: Note["text"]): ActionResult<NoteDraft, ErrorCode> {
+export function createNote(
+  id: Note["id"],
+  questId: Quest["id"],
+  text: Note["text"]
+): ActionResult<Note, ErrorCode> {
+  if (!uuidPattern.test(id)) return { ok: false, action: "note_create", error: "NOTE_ID_INVALID" }
+
+  if (!uuidPattern.test(questId)) return { ok: false, action: "note_create", error: "NOTE_QUEST_ID_INVALID" }
+
   const t = text.trim()
 
   if (t.length === 0) return { ok: false, action: "note_create", error: "NOTE_TEXT_REQUIRED" }
 
-  const createdNote: NoteDraft = {
+  const createdNote: Note = {
+    id,
     questId,
     text: t,
 
@@ -278,7 +290,7 @@ export function createNote(questId: Quest["id"], text: Note["text"]): ActionResu
   return { ok: true, action: "note_create", value: createdNote }
 }
 
-export function updateNote(note: Note, text: NoteDraft["text"]): ActionResult<Note, ErrorCode> {
+export function updateNote(note: Note, text: Note["text"]): ActionResult<Note, ErrorCode> {
   const t = text.trim()
 
   if (t.length === 0) return { ok: false, action: "note_update", error: "NOTE_TEXT_REQUIRED" }
@@ -307,13 +319,20 @@ export function markNoteActive(note: Note): ActionResult<Note, ErrorCode> {
 }
 
 export function createProgress(
+  id: Progress["id"],
   questId: Quest["id"],
-  text: ProgressDraft["text"]
-): ActionResult<ProgressDraft, ErrorCode> {
+  text: Progress["text"]
+): ActionResult<Progress, ErrorCode> {
+  if (!uuidPattern.test(id)) return { ok: false, action: "progress_create", error: "PROGRESS_ID_INVALID" }
+
+  if (!uuidPattern.test(questId))
+    return { ok: false, action: "progress_create", error: "PROGRESS_QUEST_ID_INVALID" }
+
   const t = text.trim()
   if (t.length === 0) return { ok: false, action: "progress_create", error: "PROGRESS_TEXT_REQUIRED" }
 
-  const createdProgress: ProgressDraft = {
+  const createdProgress: Progress = {
+    id,
     questId,
     text: t,
 
@@ -332,7 +351,7 @@ export function updateProgress(
   const t = text.trim()
   if (t.length === 0) return { ok: false, action: "progress_update", error: "PROGRESS_TEXT_REQUIRED" }
 
-  const updatedProgress: Note = {
+  const updatedProgress: Progress = {
     ...progress,
     text: t
   }
