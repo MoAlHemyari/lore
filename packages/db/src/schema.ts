@@ -1,4 +1,5 @@
 import { sqliteTable as table } from "drizzle-orm/sqlite-core"
+import type { SQLiteColumnBuilders } from "drizzle-orm/sqlite-core/columns/all"
 import { sql } from "drizzle-orm"
 
 import {
@@ -17,8 +18,6 @@ import {
 // inserted from the caller, the interface specifically.
 
 export const quests = table("quests", (t) => ({
-  id: t.text("id").primaryKey(),
-
   kind: t.text("kind", { enum: Object.keys(questKinds) as [QuestKind] }).notNull(),
   title: t.text("title").notNull(),
   description: t.text("description").default(""),
@@ -29,32 +28,31 @@ export const quests = table("quests", (t) => ({
   abandonedAt: t.integer("abandoned_at", { mode: "timestamp" }),
   completedAt: t.integer("completed_at", { mode: "timestamp" }),
 
-  removedAt: t.integer("removed_at", { mode: "timestamp" }),
-  updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
-  createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
+  ...baseSchemaColumns(t)
 }))
 
 export const notes = table("notes", (t) => ({
-  id: t.text("id").primaryKey(),
-
   questId: t.text("quest_id").references(() => quests.id),
   text: t.text().notNull(),
 
-  removedAt: t.integer("removed_at", { mode: "timestamp" }),
-  updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
-  createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
+  ...baseSchemaColumns(t)
 }))
 
 export const progress = table("progress", (t) => ({
-  id: t.text("id").primaryKey(),
-
   questId: t
     .text("quest_id")
     .references(() => quests.id)
     .notNull(),
   text: t.text().notNull(),
 
+  ...baseSchemaColumns(t)
+}))
+
+// this is shared between entities and identical with the `BaseCoreEntity` type
+const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
+  id: t.text("id").primaryKey(),
+
   removedAt: t.integer("removed_at", { mode: "timestamp" }),
   updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
   createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
-}))
+})
