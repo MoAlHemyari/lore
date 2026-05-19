@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
 
 /**
@@ -8,4 +9,4 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
  * @returns A string representing the SQL IN expression.
  */
 export const checkIN = (c: SQLiteColumn, opts: string[]) =>
-  `${c} IN (${opts.map((o) => `'${o}'`).join(", ")})`
+  sql`${c} IN (${sql.raw(opts.map((o) => `'${o}'`).join(", "))})`

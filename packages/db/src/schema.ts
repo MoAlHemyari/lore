@@ -10,6 +10,7 @@ import {
 } from "../../core/src/entities"
 import { checkIN } from "./helpers"
 
+// -----
 // notes:
 //
 // 1. sqlite has no enums and drizzle enum is to infer `insert` and `select` types, not to check runtime values.
@@ -21,6 +22,21 @@ import { checkIN } from "./helpers"
 //
 // 3. i added the defaults for update and create not to be used but as a fallback. these values should be
 // inserted from the caller, the interface specifically.
+// -----
+
+// -----
+// this is shared between entities and identical with the `BaseCoreEntity` type
+// NOTE: baseSchemaColumns must be initizlized before calling it, you will get this error when
+// running `drizzle-kit generate:
+//    "ReferenceError: Cannot access 'baseSchemaColumns' before initialization
+// -----
+const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
+  id: t.text("id").primaryKey(),
+
+  removedAt: t.integer("removed_at", { mode: "timestamp" }),
+  updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
+  createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
+})
 
 export const quests = table(
   "quests",
@@ -39,8 +55,8 @@ export const quests = table(
     ...baseSchemaColumns(t)
   }),
   (table) => [
-    check("check_kind", sql`${checkIN(table.kind, Object.values(questKinds) as string[])}`),
-    check("check_status", sql`${checkIN(table.status, Object.values(questLifecycleStatuses) as string[])}`)
+    check("check_kind", checkIN(table.kind, Object.values(questKinds) as string[])),
+    check("check_status", checkIN(table.status, Object.values(questLifecycleStatuses) as string[]))
   ]
 )
 
@@ -60,12 +76,3 @@ export const progress = table("progress", (t) => ({
 
   ...baseSchemaColumns(t)
 }))
-
-// this is shared between entities and identical with the `BaseCoreEntity` type
-const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
-  id: t.text("id").primaryKey(),
-
-  removedAt: t.integer("removed_at", { mode: "timestamp" }),
-  updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
-  createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
-})
