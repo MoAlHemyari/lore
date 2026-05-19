@@ -6,7 +6,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
  *
  * @param c - The SQLite column to check.
  * @param opts - An array of valid string values for the column.
- * @returns A string representing the SQL IN expression.
+ * @returns A Drizzle SQL expression representing the SQL IN check.
  */
 export const checkIN = (c: SQLiteColumn, opts: string[]) =>
   sql`${c} IN (${sql.raw(opts.map((o) => `'${o}'`).join(", "))})`
