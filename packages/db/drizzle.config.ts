@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit"
-import { DATABASE_URL, DRIZZLE_OUT } from "./src"
+import { DATABASE_URL, DRIZZLE_OUT } from "./src/constants"
 
 export default defineConfig({
   out: DRIZZLE_OUT,
