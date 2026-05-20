@@ -3,7 +3,11 @@
   "version": "0.0.0",
   "type": "module",
   "private": true,
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "generate": "bunx drizzle-kit generate",
     "migrate": "bun run ./src/migrate.ts"
   },

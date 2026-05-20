@@ -2,5 +2,11 @@
   "name": "@lore/core",
   "version": "0.0.1",
   "type": "module",
-  "private": true
+  "private": true,
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
 }

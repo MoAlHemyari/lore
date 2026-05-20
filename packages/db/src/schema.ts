@@ -2,12 +2,7 @@ import { check, sqliteTable as table } from "drizzle-orm/sqlite-core"
 import type { SQLiteColumnBuilders } from "drizzle-orm/sqlite-core/columns/all"
 import { sql } from "drizzle-orm"
 
-import {
-  questKinds,
-  questLifecycleStatuses,
-  type QuestKind,
-  type QuestLifecycleStatus
-} from "../../core/src/entities"
+import { questKinds, questLifecycleStatuses, type QuestKind, type QuestLifecycleStatus } from "@lore/core"
 import { checkIN } from "./helpers"
 
 // -----
