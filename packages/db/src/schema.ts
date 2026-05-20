@@ -42,7 +42,7 @@ export const quests = table(
   "quests",
   (t) => ({
     title: t.text("title").notNull(),
-    description: t.text("description").default(""),
+    description: t.text("description").notNull().default(""),
 
     kind: t.text("kind", { enum: Object.keys(questKinds) as [QuestKind] }).notNull(),
     status: t.text("status", { enum: Object.keys(questLifecycleStatuses) as [QuestLifecycleStatus] }),
