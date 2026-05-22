@@ -55,7 +55,7 @@ export function createQuest(
   kind: QuestKind = "main",
   status: QuestLifecycleStatus = "active",
   description: Quest["description"] = ""
-): ActionResult<Quest, ErrorCode> {
+): ActionResult<Omit<Quest, "id">, ErrorCode> {
   if (!uuidPattern.test(id)) return { ok: false, action: "quest_create", error: "QUEST_ID_INVALID" }
 
   const t = title.trim()
@@ -81,8 +81,7 @@ export function createQuest(
       error: "QUEST_STATUS_CANNOT_BE_INITIALIZED_WITH_IDLED"
     }
 
-  const createdQuest: Quest = {
-    id,
+  const createdQuest: Omit<Quest, "id"> = {
     title: t,
     description,
     kind,
@@ -268,7 +267,7 @@ export function createNote(
   id: Note["id"],
   text: Note["text"],
   questId: Quest["id"] | null
-): ActionResult<Note, ErrorCode> {
+): ActionResult<Omit<Note, "id">, ErrorCode> {
   if (!uuidPattern.test(id)) return { ok: false, action: "note_create", error: "NOTE_ID_INVALID" }
 
   if (questId) {
@@ -280,8 +279,7 @@ export function createNote(
 
   if (t.length === 0) return { ok: false, action: "note_create", error: "NOTE_TEXT_REQUIRED" }
 
-  const createdNote: Note = {
-    id,
+  const createdNote: Omit<Note, "id"> = {
     questId,
     text: t,
 
@@ -325,7 +323,7 @@ export function createProgress(
   id: Progress["id"],
   questId: Quest["id"],
   text: Progress["text"]
-): ActionResult<Progress, ErrorCode> {
+): ActionResult<Omit<Progress, "id">, ErrorCode> {
   if (!uuidPattern.test(id)) return { ok: false, action: "progress_create", error: "PROGRESS_ID_INVALID" }
 
   if (!uuidPattern.test(questId))
@@ -334,8 +332,7 @@ export function createProgress(
   const t = text.trim()
   if (t.length === 0) return { ok: false, action: "progress_create", error: "PROGRESS_TEXT_REQUIRED" }
 
-  const createdProgress: Progress = {
-    id,
+  const createdProgress: Omit<Progress, "id"> = {
     questId,
     text: t,
 

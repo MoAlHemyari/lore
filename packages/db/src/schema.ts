@@ -26,7 +26,10 @@ import { checkIN } from "./helpers"
 //    "ReferenceError: Cannot access 'baseSchemaColumns' before initialization
 // -----
 const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
-  id: t.text("id").primaryKey(),
+  id: t
+    .text("id")
+    .primaryKey()
+    .$default(() => crypto.randomUUID()),
 
   removedAt: t.integer("removed_at", { mode: "timestamp" }),
   updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),

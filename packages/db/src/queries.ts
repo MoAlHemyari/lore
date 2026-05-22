@@ -131,22 +131,25 @@ export async function insertProgress(progress: InsertProgress) {
   return insertedProgress
 }
 
-type UpdateQuest = Partial<InsertQuest>
-export async function updateQuest(id: InsertQuest["id"], values: Omit<UpdateQuest, "id">) {
+export async function updateQuest(id: Quest["id"], values: Omit<Quest, "id">) {
+  if (id === undefined) return undefined
+
   const [updatedFields] = await db.update(questsTable).set(values).where(eq(questsTable.id, id)).returning()
 
   return updatedFields
 }
 
-type UpdateNote = Partial<InsertNote>
-export async function updateNote(id: InsertNote["id"], values: Omit<UpdateNote, "id">) {
+export async function updateNote(id: Note["id"], values: Omit<Note, "id">) {
+  if (id === undefined) return undefined
+
   const [updatedFields] = await db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning()
 
   return updatedFields
 }
 
-type UpdateProgress = Partial<InsertProgress>
-export async function updateProgress(id: InsertProgress["id"], values: Omit<UpdateProgress, "id">) {
+export async function updateProgress(id: Progress["id"], values: Omit<Progress, "id">) {
+  if (id === undefined) return undefined
+
   const [updatedFields] = await db
     .update(progressTable)
     .set(values)
