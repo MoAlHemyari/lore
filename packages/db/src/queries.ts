@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
-import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
+import { quests as questsTable, notes as notesTable, progress as progressTable, notes } from "./schema"
 import { db } from "./db"
+import type { Note, Progress, Quest } from "@lore/core"
 
 // read functions
 export async function getAllQuests() {
@@ -60,4 +61,53 @@ export async function updateProgress(id: InsertProgress["id"], values: Omit<Upda
     .returning()
 
   return updatedFields
+}
+
+type DeletedRow<ID> = { deletedId: ID }
+type DeleteResult<ID> = Promise<DeletedRow<ID> | null>
+type DeleteManyResult<ID> = Promise<DeletedRow<ID>[]>
+
+export async function wipeAllQuestsTableRows(): DeleteManyResult<Quest["id"]> {
+  return db.delete(questsTable).returning({ deletedId: questsTable.id })
+}
+
+export async function wipeAllNotesTableRows(): DeleteManyResult<Note["id"]> {
+  return db.delete(notesTable).returning({ deletedId: notesTable.id })
+}
+
+export async function wipeAllProgressTableRows(): DeleteManyResult<Progress["id"]> {
+  return db.delete(progressTable).returning({ deletedId: progressTable.id })
+}
+
+export async function deleteQuestById(id: Quest["id"]): DeleteResult<Quest["id"]> {
+  const [deletedId] = await db
+    .delete(questsTable)
+    .where(eq(questsTable.id, id))
+    .returning({ deletedId: questsTable.id })
+
+  if (deletedId) return deletedId
+
+  return null
+}
+
+export async function deleteNoteById(id: Note["id"]): DeleteResult<Note["id"]> {
+  const [deletedId] = await db
+    .delete(notesTable)
+    .where(eq(notesTable.id, id))
+    .returning({ deletedId: notesTable.id })
+
+  if (deletedId) return deletedId
+
+  return null
+}
+
+export async function deleteProgressById(id: Progress["id"]): DeleteResult<Progress["id"]> {
+  const [deletedId] = await db
+    .delete(progressTable)
+    .where(eq(progressTable.id, id))
+    .returning({ deletedId: progressTable.id })
+
+  if (deletedId) return deletedId
+
+  return null
 }
