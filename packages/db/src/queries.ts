@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm"
-import { quests as questsTable, notes as notesTable, progress as progressTable, notes } from "./schema"
+import { asc, desc, eq } from "drizzle-orm"
+import type { SelectedFields } from "drizzle-orm/sqlite-core"
+import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
 import type { Note, Progress, Quest } from "@lore/core"
 
@@ -14,6 +15,98 @@ export async function getAllNotes() {
 
 export async function getAllProgresses() {
   return db.select().from(progressTable)
+}
+
+const DEFAULT_OFFSET = 0
+const DEFAULT_LIMIT = 10
+
+type GenericOrderByFields = "createdAt" | "updatedAt"
+
+type QuestOrderByFields = GenericOrderByFields | "kind" | "status"
+export async function getQuests(
+  selection: SelectedFields,
+  order: {
+    sort: "asc" | "desc"
+    field: QuestOrderByFields
+  } = {
+    sort: "desc",
+    field: "createdAt"
+  },
+  limit: number = DEFAULT_LIMIT,
+  offset: number = DEFAULT_OFFSET
+) {
+  return db
+    .select(selection)
+    .from(questsTable)
+    .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
+    .limit(limit)
+    .offset(offset)
+}
+
+type NotesOrderByFields = GenericOrderByFields | "questId"
+export async function getNotes(
+  selection: SelectedFields,
+  order: {
+    sort: "asc" | "desc"
+    field: NotesOrderByFields
+  } = {
+    sort: "desc",
+    field: "createdAt"
+  },
+  limit: number = DEFAULT_LIMIT,
+  offset: number = DEFAULT_OFFSET
+) {
+  return db
+    .select(selection)
+    .from(notesTable)
+    .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
+    .limit(limit)
+    .offset(offset)
+}
+
+type ProgressOrderByFields = GenericOrderByFields | "questId"
+export async function getProgress(
+  selection: SelectedFields,
+  order: {
+    sort: "asc" | "desc"
+    field: ProgressOrderByFields
+  } = {
+    sort: "desc",
+    field: "createdAt"
+  },
+  limit: number = DEFAULT_LIMIT,
+  offset: number = DEFAULT_OFFSET
+) {
+  return db
+    .select(selection)
+    .from(progressTable)
+    .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
+    .limit(limit)
+    .offset(offset)
+}
+
+export async function getQuestById(id: Quest["id"]) {
+  const [selected] = await db.select().from(questsTable).where(eq(questsTable.id, id))
+
+  if (selected) return selected
+
+  return null
+}
+
+export async function getNoteById(id: Note["id"]) {
+  const [selected] = await db.select().from(notesTable).where(eq(notesTable.id, id))
+
+  if (selected) return selected
+
+  return null
+}
+
+export async function getProgressById(id: Progress["id"]) {
+  const [selected] = await db.select().from(progressTable).where(eq(progressTable.id, id))
+
+  if (selected) return selected
+
+  return null
 }
 
 // mutations
