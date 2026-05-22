@@ -20,7 +20,7 @@ CREATE TABLE `progress` (
 --> statement-breakpoint
 CREATE TABLE `quests` (
 	`title` text NOT NULL,
-	`description` text DEFAULT '',
+	`description` text DEFAULT '' NOT NULL,
 	`kind` text NOT NULL,
 	`status` text,
 	`paused_at` integer,
