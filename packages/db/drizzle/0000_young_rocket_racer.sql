@@ -4,7 +4,7 @@ CREATE TABLE `notes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`removed_at` integer,
 	`updated_at` integer,
-	`created_at` integer DEFAULT (CURRENT_TIMESTAMP),
+	`created_at` integer DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -14,7 +14,7 @@ CREATE TABLE `progress` (
 	`id` text PRIMARY KEY NOT NULL,
 	`removed_at` integer,
 	`updated_at` integer,
-	`created_at` integer DEFAULT (CURRENT_TIMESTAMP),
+	`created_at` integer DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -22,7 +22,7 @@ CREATE TABLE `quests` (
 	`title` text NOT NULL,
 	`description` text DEFAULT '' NOT NULL,
 	`kind` text NOT NULL,
-	`status` text,
+	`status` text NOT NULL,
 	`paused_at` integer,
 	`idled_at` integer,
 	`abandoned_at` integer,
@@ -30,7 +30,7 @@ CREATE TABLE `quests` (
 	`id` text PRIMARY KEY NOT NULL,
 	`removed_at` integer,
 	`updated_at` integer,
-	`created_at` integer DEFAULT (CURRENT_TIMESTAMP),
+	`created_at` integer DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	CONSTRAINT "check_kind" CHECK("quests"."kind" IN ('main', 'side')),
 	CONSTRAINT "check_status" CHECK("quests"."status" IN ('active', 'idle', 'paused', 'abandoned', 'completed', 'removed'))
 );

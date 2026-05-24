@@ -33,7 +33,10 @@ const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
 
   removedAt: t.integer("removed_at", { mode: "timestamp" }),
   updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
-  createdAt: t.integer("created_at", { mode: "timestamp" }).default(sql`(CURRENT_TIMESTAMP)`)
+  createdAt: t
+    .integer("created_at", { mode: "timestamp" })
+    .default(sql`(CURRENT_TIMESTAMP)`)
+    .notNull()
 })
 
 export const quests = table(
@@ -43,7 +46,9 @@ export const quests = table(
     description: t.text("description").notNull().default(""),
 
     kind: t.text("kind", { enum: Object.keys(questKinds) as [QuestKind] }).notNull(),
-    status: t.text("status", { enum: Object.keys(questLifecycleStatuses) as [QuestLifecycleStatus] }),
+    status: t
+      .text("status", { enum: Object.keys(questLifecycleStatuses) as [QuestLifecycleStatus] })
+      .notNull(),
 
     pausedAt: t.integer("paused_at", { mode: "timestamp" }),
     idledAt: t.integer("idled_at", { mode: "timestamp" }),
