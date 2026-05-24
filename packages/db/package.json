@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "rebuild": "rm -rf dist && tsc -p tsconfig.json",
     "generate": "bunx drizzle-kit generate",
     "migrate": "bun run ./src/migrate.ts"
   },
