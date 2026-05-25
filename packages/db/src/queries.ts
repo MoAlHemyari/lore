@@ -131,15 +131,32 @@ export async function insertProgress(progress: InsertProgress) {
   return insertedProgress
 }
 
-export async function updateQuest(id: Quest["id"], values: Omit<Quest, "id">) {
+export type UpdateQuestValues = Pick<Quest, "kind" | "title" | "description" | "status">
+export async function updateQuest(id: Quest["id"], values: UpdateQuestValues) {
   if (id === undefined) return undefined
 
-  const [updatedFields] = await db.update(questsTable).set(values).where(eq(questsTable.id, id)).returning()
+  // update status change timestamp
+  const updateValues = {
+    ...values,
+
+    ...(values.status === "paused" && { pausedAt: new Date().toISOString() }),
+    ...(values.status === "idle" && { idledAt: new Date().toISOString() }),
+    ...(values.status === "abandoned" && { abandonedAt: new Date().toISOString() }),
+    ...(values.status === "completed" && { completedAt: new Date().toISOString() }),
+    ...(values.status === "removed" && { removedAt: new Date().toISOString() })
+  }
+
+  const [updatedFields] = await db
+    .update(questsTable)
+    .set(updateValues)
+    .where(eq(questsTable.id, id))
+    .returning()
 
   return updatedFields
 }
 
-export async function updateNote(id: Note["id"], values: Omit<Note, "id">) {
+export type UpdateNoteValues = Pick<Note, "text">
+export async function updateNote(id: Note["id"], values: UpdateNoteValues) {
   if (id === undefined) return undefined
 
   const [updatedFields] = await db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning()
@@ -147,7 +164,8 @@ export async function updateNote(id: Note["id"], values: Omit<Note, "id">) {
   return updatedFields
 }
 
-export async function updateProgress(id: Progress["id"], values: Omit<Progress, "id">) {
+export type UpdateProgressValues = Pick<Progress, "text">
+export async function updateProgress(id: Progress["id"], values: UpdateProgressValues) {
   if (id === undefined) return undefined
 
   const [updatedFields] = await db
