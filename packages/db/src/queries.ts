@@ -2,7 +2,7 @@ import { asc, desc, eq } from "drizzle-orm"
 import type { SelectedFields } from "drizzle-orm/sqlite-core"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
-import type { Note, Progress, Quest } from "@lore/core"
+import { questKinds, questLifecycleStatuses, type Note, type Progress, type Quest } from "@lore/core"
 
 // read functions
 export async function getAllQuests() {
@@ -110,22 +110,33 @@ export async function getProgressById(id: Progress["id"]) {
 }
 
 // mutations
-type InsertQuest = typeof questsTable.$inferInsert
-export async function insertQuest(quest: InsertQuest) {
-  const [insertedQuest] = await db.insert(questsTable).values(quest).returning()
+export type CreateQuestValues = {
+  title: Quest["title"]
+  kind?: Quest["kind"]
+  description?: Quest["description"]
+  status?: Quest["status"]
+}
+export async function insertQuest(quest: CreateQuestValues) {
+  const updateValues: typeof questsTable.$inferInsert = {
+    ...quest,
+    kind: quest.kind ?? questKinds.MAIN,
+    status: quest.status ?? questLifecycleStatuses.ACTIVE
+  }
+
+  const [insertedQuest] = await db.insert(questsTable).values(updateValues).returning()
 
   return insertedQuest
 }
 
-type InsertNote = typeof notesTable.$inferInsert
-export async function insertNote(note: InsertNote) {
+export type CreateNoteValue = Pick<typeof notesTable.$inferInsert, "text" | "questId">
+export async function insertNote(note: CreateNoteValue) {
   const [insertedNote] = await db.insert(notesTable).values(note).returning()
 
   return insertedNote
 }
 
-type InsertProgress = typeof progressTable.$inferInsert
-export async function insertProgress(progress: InsertProgress) {
+export type CreateProgress = Pick<typeof progressTable.$inferInsert, "text" | "questId">
+export async function insertProgress(progress: CreateProgress) {
   const [insertedProgress] = await db.insert(progressTable).values(progress).returning()
 
   return insertedProgress
