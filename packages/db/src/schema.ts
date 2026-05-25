@@ -1,4 +1,4 @@
-import { check, sqliteTable as table } from "drizzle-orm/sqlite-core"
+import { check, sqliteTable as table, type AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 import type { SQLiteColumnBuilders } from "drizzle-orm/sqlite-core/columns/all"
 import { sql } from "drizzle-orm"
 
@@ -31,13 +31,36 @@ const baseSchemaColumns = (t: SQLiteColumnBuilders) => ({
     .primaryKey()
     .$default(() => crypto.randomUUID()),
 
-  removedAt: t.integer("removed_at", { mode: "timestamp" }),
-  updatedAt: t.integer("updated_at", { mode: "timestamp" }).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`),
+  removedAt: t.text("removed_at"),
+  updatedAt: t
+    .text("updated_at")
+    .default(sql`(CURRENT_TIMESTAMP)`)
+    .$onUpdate(() => sql`(CURRENT_TIMESTAMP)`)
+    .notNull(),
   createdAt: t
-    .integer("created_at", { mode: "timestamp" })
+    .text("created_at")
     .default(sql`(CURRENT_TIMESTAMP)`)
     .notNull()
 })
+
+const baseSchemaCheckConstraints = <
+  T extends {
+    removedAt: AnySQLiteColumn
+    createdAt: AnySQLiteColumn
+  }
+>(
+  table: T
+) => [
+  // check if removed_at isn't null and has a valid sqlite datetime format
+  check(
+    "check_removed_at_format",
+    sql`${table.removedAt} IS NULL OR datetime(${table.removedAt}) IS NOT NULL`
+  ),
+  check(
+    "check_removed_at_after_created",
+    sql`${table.removedAt} IS NULL OR ${table.removedAt} >= ${table.createdAt}`
+  )
+]
 
 export const quests = table(
   "quests",
@@ -50,32 +73,97 @@ export const quests = table(
       .text("status", { enum: Object.keys(questLifecycleStatuses) as [QuestLifecycleStatus] })
       .notNull(),
 
-    pausedAt: t.integer("paused_at", { mode: "timestamp" }),
-    idledAt: t.integer("idled_at", { mode: "timestamp" }),
-    abandonedAt: t.integer("abandoned_at", { mode: "timestamp" }),
-    completedAt: t.integer("completed_at", { mode: "timestamp" }),
+    pausedAt: t.text("paused_at"),
+    idledAt: t.text("idled_at"),
+    abandonedAt: t.text("abandoned_at"),
+    completedAt: t.text("completed_at"),
 
     ...baseSchemaColumns(t)
   }),
   (table) => [
+    ...baseSchemaCheckConstraints(table),
+
     check("check_kind", checkIN(table.kind, Object.values(questKinds) as string[])),
-    check("check_status", checkIN(table.status, Object.values(questLifecycleStatuses) as string[]))
+    check("check_status", checkIN(table.status, Object.values(questLifecycleStatuses) as string[])),
+
+    // check if timestamps have right format
+    check(
+      "check_paused_at_format",
+      sql`${table.pausedAt} IS NULL OR datetime(${table.pausedAt}) IS NOT NULL`
+    ),
+    check("check_idled_at_format", sql`${table.idledAt} IS NULL OR datetime(${table.idledAt}) IS NOT NULL`),
+    check(
+      "check_abandoned_at_format",
+      sql`${table.abandonedAt} IS NULL OR datetime(${table.abandonedAt}) IS NOT NULL`
+    ),
+    check(
+      "check_completed_at_format",
+      sql`${table.completedAt} IS NULL OR datetime(${table.completedAt}) IS NOT NULL`
+    ),
+
+    // check if timestamps are after the created at timestamp
+    check(
+      "check_paused_at_after_created",
+      sql`${table.pausedAt} IS NULL OR ${table.pausedAt} >= ${table.createdAt}`
+    ),
+    check(
+      "check_idled_at_after_created",
+      sql`${table.idledAt} IS NULL OR ${table.idledAt} >= ${table.createdAt}`
+    ),
+    check(
+      "check_abandoned_at_after_created",
+      sql`${table.abandonedAt} IS NULL OR ${table.abandonedAt} >= ${table.createdAt}`
+    ),
+    check(
+      "check_completed_at_after_created",
+      sql`${table.completedAt} IS NULL OR ${table.completedAt} >= ${table.createdAt}`
+    ),
+
+    // check if status exists with its timestamp not null
+    check(
+      "check_paused_at_status",
+      sql`${table.status} != '${sql.raw(questLifecycleStatuses.PAUSED)}' OR ${table.pausedAt} IS NOT NULL`
+    ),
+    check(
+      "check_idled_at_status",
+      sql`${table.status} != '${sql.raw(questLifecycleStatuses.IDLE)}' OR ${table.idledAt} IS NOT NULL`
+    ),
+    check(
+      "check_abandoned_at_status",
+      sql`${table.status} != '${sql.raw(questLifecycleStatuses.ABANDONED)}' OR ${table.abandonedAt} IS NOT NULL`
+    ),
+    check(
+      "check_completed_at_status",
+      sql`${table.status} != '${sql.raw(questLifecycleStatuses.COMPLETED)}' OR ${table.completedAt} IS NOT NULL`
+    ),
+    check(
+      "check_removed_at_status",
+      sql`${table.status} != '${sql.raw(questLifecycleStatuses.REMOVED)}' OR ${table.removedAt} IS NOT NULL`
+    )
   ]
 )
 
-export const notes = table("notes", (t) => ({
-  questId: t.text("quest_id").references(() => quests.id),
-  text: t.text().notNull(),
+export const notes = table(
+  "notes",
+  (t) => ({
+    questId: t.text("quest_id").references(() => quests.id),
+    text: t.text().notNull(),
 
-  ...baseSchemaColumns(t)
-}))
+    ...baseSchemaColumns(t)
+  }),
+  (table) => [...baseSchemaCheckConstraints(table)]
+)
 
-export const progress = table("progress", (t) => ({
-  questId: t
-    .text("quest_id")
-    .references(() => quests.id)
-    .notNull(),
-  text: t.text().notNull(),
+export const progress = table(
+  "progress",
+  (t) => ({
+    questId: t
+      .text("quest_id")
+      .references(() => quests.id)
+      .notNull(),
+    text: t.text().notNull(),
 
-  ...baseSchemaColumns(t)
-}))
+    ...baseSchemaColumns(t)
+  }),
+  (table) => [...baseSchemaCheckConstraints(table)]
+)

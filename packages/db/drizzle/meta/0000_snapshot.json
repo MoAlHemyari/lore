@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "60a2c5b6-5de7-44b5-8e54-0439eb1e918f",
+  "id": "d0f1412e-24d8-4c77-8308-ea6b77f85928",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "notes": {
@@ -30,21 +30,22 @@
         },
         "removed_at": {
           "name": "removed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -69,7 +70,16 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "check_removed_at_format": {
+          "name": "check_removed_at_format",
+          "value": "\"notes\".\"removed_at\" IS NULL OR datetime(\"notes\".\"removed_at\") IS NOT NULL"
+        },
+        "check_removed_at_after_created": {
+          "name": "check_removed_at_after_created",
+          "value": "\"notes\".\"removed_at\" IS NULL OR \"notes\".\"removed_at\" >= \"notes\".\"created_at\""
+        }
+      }
     },
     "progress": {
       "name": "progress",
@@ -97,21 +107,22 @@
         },
         "removed_at": {
           "name": "removed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -136,7 +147,16 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "check_removed_at_format": {
+          "name": "check_removed_at_format",
+          "value": "\"progress\".\"removed_at\" IS NULL OR datetime(\"progress\".\"removed_at\") IS NOT NULL"
+        },
+        "check_removed_at_after_created": {
+          "name": "check_removed_at_after_created",
+          "value": "\"progress\".\"removed_at\" IS NULL OR \"progress\".\"removed_at\" >= \"progress\".\"created_at\""
+        }
+      }
     },
     "quests": {
       "name": "quests",
@@ -172,28 +192,28 @@
         },
         "paused_at": {
           "name": "paused_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "idled_at": {
           "name": "idled_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "abandoned_at": {
           "name": "abandoned_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "completed_at": {
           "name": "completed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -207,21 +227,22 @@
         },
         "removed_at": {
           "name": "removed_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -233,6 +254,14 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "check_removed_at_format": {
+          "name": "check_removed_at_format",
+          "value": "\"quests\".\"removed_at\" IS NULL OR datetime(\"quests\".\"removed_at\") IS NOT NULL"
+        },
+        "check_removed_at_after_created": {
+          "name": "check_removed_at_after_created",
+          "value": "\"quests\".\"removed_at\" IS NULL OR \"quests\".\"removed_at\" >= \"quests\".\"created_at\""
+        },
         "check_kind": {
           "name": "check_kind",
           "value": "\"quests\".\"kind\" IN ('main', 'side')"
@@ -240,6 +269,58 @@
         "check_status": {
           "name": "check_status",
           "value": "\"quests\".\"status\" IN ('active', 'idle', 'paused', 'abandoned', 'completed', 'removed')"
+        },
+        "check_paused_at_format": {
+          "name": "check_paused_at_format",
+          "value": "\"quests\".\"paused_at\" IS NULL OR datetime(\"quests\".\"paused_at\") IS NOT NULL"
+        },
+        "check_idled_at_format": {
+          "name": "check_idled_at_format",
+          "value": "\"quests\".\"idled_at\" IS NULL OR datetime(\"quests\".\"idled_at\") IS NOT NULL"
+        },
+        "check_abandoned_at_format": {
+          "name": "check_abandoned_at_format",
+          "value": "\"quests\".\"abandoned_at\" IS NULL OR datetime(\"quests\".\"abandoned_at\") IS NOT NULL"
+        },
+        "check_completed_at_format": {
+          "name": "check_completed_at_format",
+          "value": "\"quests\".\"completed_at\" IS NULL OR datetime(\"quests\".\"completed_at\") IS NOT NULL"
+        },
+        "check_paused_at_after_created": {
+          "name": "check_paused_at_after_created",
+          "value": "\"quests\".\"paused_at\" IS NULL OR \"quests\".\"paused_at\" >= \"quests\".\"created_at\""
+        },
+        "check_idled_at_after_created": {
+          "name": "check_idled_at_after_created",
+          "value": "\"quests\".\"idled_at\" IS NULL OR \"quests\".\"idled_at\" >= \"quests\".\"created_at\""
+        },
+        "check_abandoned_at_after_created": {
+          "name": "check_abandoned_at_after_created",
+          "value": "\"quests\".\"abandoned_at\" IS NULL OR \"quests\".\"abandoned_at\" >= \"quests\".\"created_at\""
+        },
+        "check_completed_at_after_created": {
+          "name": "check_completed_at_after_created",
+          "value": "\"quests\".\"completed_at\" IS NULL OR \"quests\".\"completed_at\" >= \"quests\".\"created_at\""
+        },
+        "check_paused_at_status": {
+          "name": "check_paused_at_status",
+          "value": "\"quests\".\"status\" != 'paused' OR \"quests\".\"paused_at\" IS NOT NULL"
+        },
+        "check_idled_at_status": {
+          "name": "check_idled_at_status",
+          "value": "\"quests\".\"status\" != 'idle' OR \"quests\".\"idled_at\" IS NOT NULL"
+        },
+        "check_abandoned_at_status": {
+          "name": "check_abandoned_at_status",
+          "value": "\"quests\".\"status\" != 'abandoned' OR \"quests\".\"abandoned_at\" IS NOT NULL"
+        },
+        "check_completed_at_status": {
+          "name": "check_completed_at_status",
+          "value": "\"quests\".\"status\" != 'completed' OR \"quests\".\"completed_at\" IS NOT NULL"
+        },
+        "check_removed_at_status": {
+          "name": "check_removed_at_status",
+          "value": "\"quests\".\"status\" != 'removed' OR \"quests\".\"removed_at\" IS NOT NULL"
         }
       }
     }
