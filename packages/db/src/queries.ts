@@ -1,21 +1,48 @@
-import { asc, desc, eq } from "drizzle-orm"
-import type { SelectedFields } from "drizzle-orm/sqlite-core"
+import { asc, desc, eq, type InferSelectModel } from "drizzle-orm"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
-import { questKinds, questLifecycleStatuses, type Note, type Progress, type Quest } from "@lore/core"
+import { type Note, type Progress, type Quest } from "@lore/core"
+import type { ErrorCode } from "./errors"
+import { mapNoteDBToDomain, mapProgressDBToDomain, mapQuestDBToDomain } from "./parsers"
 
-// read functions
-export async function getAllQuests() {
-  return db.select().from(questsTable)
-}
+const operations = [
+  // quest operations
+  "quests_get_all",
+  "quest_get_by_id",
+  "quest_insert",
+  "quest_update",
+  "quest_delete_all",
+  "quest_delete_by_id",
 
-export async function getAllNotes() {
-  return db.select().from(notesTable)
-}
+  // notes operations
+  "notes_get_all",
+  "notes_get_by_id",
+  "notes_insert",
+  "notes_update",
+  "notes_delete_all",
+  "notes_delete_by_id",
 
-export async function getAllProgresses() {
-  return db.select().from(progressTable)
-}
+  // progress operations
+  "progresses_get_all",
+  "progresses_get_by_id",
+  "progresses_insert",
+  "progresses_update",
+  "progresses_delete_all",
+  "progresses_delete_by_id"
+] as const
+type OperationKind = (typeof operations)[number]
+
+type OperationResult<T> =
+  | {
+      ok: true
+      operation: OperationKind
+      value: T
+    }
+  | {
+      ok: false
+      operation: OperationKind
+      error: ErrorCode
+    }
 
 const DEFAULT_OFFSET = 0
 const DEFAULT_LIMIT = 10
@@ -24,7 +51,6 @@ type GenericOrderByFields = "createdAt" | "updatedAt"
 
 type QuestOrderByFields = GenericOrderByFields | "kind" | "status"
 export async function getQuests(
-  selection: SelectedFields,
   order: {
     sort: "asc" | "desc"
     field: QuestOrderByFields
@@ -34,18 +60,31 @@ export async function getQuests(
   },
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
-) {
-  return db
-    .select(selection)
+): Promise<OperationResult<Quest[]>> {
+  const rows = await db
+    .select()
     .from(questsTable)
     .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
     .limit(limit)
     .offset(offset)
+
+  const quests: Quest[] = []
+  for (const row of rows) {
+    const result = mapQuestDBToDomain(row)
+    if (!result.ok) return { ok: false, operation: "quests_get_all", error: result.error }
+
+    quests.push(result.value)
+  }
+
+  return {
+    ok: true,
+    operation: "quests_get_all",
+    value: quests
+  }
 }
 
 type NotesOrderByFields = GenericOrderByFields | "questId"
 export async function getNotes(
-  selection: SelectedFields,
   order: {
     sort: "asc" | "desc"
     field: NotesOrderByFields
@@ -55,18 +94,31 @@ export async function getNotes(
   },
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
-) {
-  return db
-    .select(selection)
+): Promise<OperationResult<Note[]>> {
+  const rows = await db
+    .select()
     .from(notesTable)
     .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
     .limit(limit)
     .offset(offset)
+
+  const notes: Note[] = []
+  for (const row of rows) {
+    const result = mapNoteDBToDomain(row)
+    if (!result.ok) return { ok: false, operation: "notes_get_all", error: result.error }
+
+    notes.push(result.value)
+  }
+
+  return {
+    ok: true,
+    operation: "notes_get_all",
+    value: notes
+  }
 }
 
 type ProgressOrderByFields = GenericOrderByFields | "questId"
-export async function getProgress(
-  selection: SelectedFields,
+export async function getProgresses(
   order: {
     sort: "asc" | "desc"
     field: ProgressOrderByFields
@@ -76,163 +128,197 @@ export async function getProgress(
   },
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
-) {
-  return db
-    .select(selection)
+): Promise<OperationResult<Progress[]>> {
+  const rows = await db
+    .select()
     .from(progressTable)
     .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
     .limit(limit)
     .offset(offset)
+
+  const progresses: Progress[] = []
+  for (const row of rows) {
+    const result = mapProgressDBToDomain(row)
+    if (!result.ok) return { ok: false, operation: "progresses_get_all", error: result.error }
+
+    progresses.push(result.value)
+  }
+
+  return {
+    ok: true,
+    operation: "progresses_get_all",
+    value: progresses
+  }
 }
 
-export async function getQuestById(id: Quest["id"]) {
+export async function getQuestById(id: Quest["id"]): Promise<OperationResult<Quest | null>> {
   const [selected] = await db.select().from(questsTable).where(eq(questsTable.id, id))
+  if (!selected) return { ok: true, operation: "quest_get_by_id", value: null }
 
-  if (selected) return selected
+  const result = mapQuestDBToDomain(selected)
+  if (!result.ok) return { ok: false, operation: "quest_get_by_id", error: result.error }
 
-  return null
+  return { ok: true, operation: "quest_get_by_id", value: result.value }
 }
 
-export async function getNoteById(id: Note["id"]) {
+export async function getNoteById(id: Note["id"]): Promise<OperationResult<Note | null>> {
   const [selected] = await db.select().from(notesTable).where(eq(notesTable.id, id))
+  if (!selected) return { ok: true, operation: "notes_get_by_id", value: null }
 
-  if (selected) return selected
+  const result = mapNoteDBToDomain(selected)
+  if (!result.ok) return { ok: false, operation: "notes_get_by_id", error: result.error }
 
-  return null
+  return { ok: true, operation: "notes_get_by_id", value: result.value }
 }
 
-export async function getProgressById(id: Progress["id"]) {
+export async function getProgressById(id: Progress["id"]): Promise<OperationResult<Note | null>> {
   const [selected] = await db.select().from(progressTable).where(eq(progressTable.id, id))
+  if (!selected) return { ok: true, operation: "progresses_get_by_id", value: null }
 
-  if (selected) return selected
+  const result = mapProgressDBToDomain(selected)
+  if (!result.ok) return { ok: false, operation: "progresses_get_by_id", error: result.error }
 
-  return null
+  return { ok: true, operation: "progresses_get_by_id", value: result.value }
 }
 
 // mutations
 export type CreateQuestValues = {
   title: Quest["title"]
-  kind?: Quest["kind"]
-  description?: Quest["description"]
-  status?: Quest["status"]
+  kind: Quest["kind"]
+  description: Quest["description"]
+  status: Quest["status"]
 }
-export async function insertQuest(quest: CreateQuestValues) {
-  const updateValues: typeof questsTable.$inferInsert = {
-    ...quest,
-    kind: quest.kind ?? questKinds.MAIN,
-    status: quest.status ?? questLifecycleStatuses.ACTIVE
-  }
+export async function insertQuest(values: CreateQuestValues): Promise<OperationResult<Quest>> {
+  const [insertedQuest] = await db.insert(questsTable).values(values).returning()
+  if (!insertedQuest) return { ok: false, operation: "quest_insert", error: "FAILED_TO_INSERT" }
 
-  const [insertedQuest] = await db.insert(questsTable).values(updateValues).returning()
+  const result = mapQuestDBToDomain(insertedQuest)
+  if (!result.ok) return { ok: false, operation: "quest_insert", error: result.error }
 
-  return insertedQuest
+  return { ok: true, operation: "quest_insert", value: result.value }
 }
 
 export type CreateNoteValue = Pick<typeof notesTable.$inferInsert, "text" | "questId">
-export async function insertNote(note: CreateNoteValue) {
+export async function insertNote(note: CreateNoteValue): Promise<OperationResult<Note>> {
   const [insertedNote] = await db.insert(notesTable).values(note).returning()
+  if (!insertedNote) return { ok: false, operation: "notes_insert", error: "FAILED_TO_INSERT" }
 
-  return insertedNote
+  const result = mapNoteDBToDomain(insertedNote)
+  if (!result.ok) return { ok: false, operation: "notes_insert", error: result.error }
+
+  return { ok: true, operation: "notes_insert", value: result.value }
 }
 
 export type CreateProgress = Pick<typeof progressTable.$inferInsert, "text" | "questId">
 export async function insertProgress(progress: CreateProgress) {
   const [insertedProgress] = await db.insert(progressTable).values(progress).returning()
+  if (!insertedProgress) return { ok: false, operation: "progresses_insert", error: "FAILED_TO_INSERT" }
 
-  return insertedProgress
+  const result = mapNoteDBToDomain(insertedProgress)
+  if (!result.ok) return { ok: false, operation: "progresses_insert", error: result.error }
+
+  return { ok: true, operation: "progress_insert", value: result.value }
 }
 
-export type UpdateQuestValues = Pick<Quest, "kind" | "title" | "description" | "status">
-export async function updateQuest(id: Quest["id"], values: UpdateQuestValues) {
-  if (id === undefined) return undefined
+// update:
+export type UpdateQuestValues = Partial<Pick<Quest, "kind" | "title" | "description" | "status">>
+export async function updateQuest(
+  id: Quest["id"],
+  values: UpdateQuestValues
+): Promise<OperationResult<Quest>> {
+  // add the timestamp of new status if changed (to the sqlite table shape on the fly)
+  let u: Partial<InferSelectModel<typeof questsTable>> = { ...values }
 
-  // update status change timestamp
-  const updateValues = {
-    ...values,
-
-    ...(values.status === "paused" && { pausedAt: new Date().toISOString() }),
-    ...(values.status === "idle" && { idledAt: new Date().toISOString() }),
-    ...(values.status === "abandoned" && { abandonedAt: new Date().toISOString() }),
-    ...(values.status === "completed" && { completedAt: new Date().toISOString() }),
-    ...(values.status === "removed" && { removedAt: new Date().toISOString() })
+  if (values.status) {
+    const t = new Date().toISOString()
+    if (values.status === "abandoned") u.abandonedAt = t
+    if (values.status === "completed") u.completedAt = t
+    if (values.status === "idle") u.idledAt = t
+    if (values.status === "paused") u.pausedAt = t
+    if (values.status === "removed") u.removedAt = t
   }
 
-  const [updatedFields] = await db
-    .update(questsTable)
-    .set(updateValues)
-    .where(eq(questsTable.id, id))
-    .returning()
+  const [updatedRow] = await db.update(questsTable).set(u).where(eq(questsTable.id, id)).returning()
+  if (!updatedRow) return { ok: false, operation: "quest_update", error: "FAILED_TO_UPDATE" }
 
-  return updatedFields
+  const result = mapQuestDBToDomain(updatedRow)
+  if (!result.ok) return { ok: false, operation: "quest_update", error: result.error }
+
+  return { ok: true, operation: "quest_update", value: result.value }
 }
 
 export type UpdateNoteValues = Pick<Note, "text">
-export async function updateNote(id: Note["id"], values: UpdateNoteValues) {
-  if (id === undefined) return undefined
+export async function updateNote(id: Note["id"], values: UpdateNoteValues): Promise<OperationResult<Note>> {
+  const [updatedRow] = await db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning()
+  if (!updatedRow) return { ok: false, operation: "notes_update", error: "FAILED_TO_UPDATE" }
 
-  const [updatedFields] = await db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning()
+  const result = mapNoteDBToDomain(updatedRow)
+  if (!result.ok) return { ok: false, operation: "notes_update", error: result.error }
 
-  return updatedFields
+  return { ok: true, operation: "notes_update", value: result.value }
 }
 
 export type UpdateProgressValues = Pick<Progress, "text">
-export async function updateProgress(id: Progress["id"], values: UpdateProgressValues) {
-  if (id === undefined) return undefined
+export async function updateProgress(
+  id: Progress["id"],
+  values: UpdateProgressValues
+): Promise<OperationResult<Progress>> {
+  const [updatedRow] = await db.update(progressTable).set(values).where(eq(progressTable.id, id)).returning()
+  if (!updatedRow) return { ok: false, operation: "progresses_update", error: "FAILED_TO_UPDATE" }
 
-  const [updatedFields] = await db
-    .update(progressTable)
-    .set(values)
-    .where(eq(progressTable.id, id))
-    .returning()
+  const result = mapProgressDBToDomain(updatedRow)
+  if (!result.ok) return { ok: false, operation: "progresses_update", error: result.error }
 
-  return updatedFields
+  return { ok: true, operation: "progresses_update", value: result.value }
 }
 
-type DeletedRow<ID> = { deletedId: ID }
-type DeleteResult<ID> = Promise<DeletedRow<ID> | null>
-type DeleteManyResult<ID> = Promise<DeletedRow<ID>[]>
+export async function wipeAllQuestsTableRows(): Promise<OperationResult<Quest["id"][]>> {
+  const deletedRowIDs = await db.delete(questsTable).returning({ id: questsTable.id })
+  const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
-export async function wipeAllQuestsTableRows(): DeleteManyResult<Quest["id"]> {
-  return db.delete(questsTable).returning({ deletedId: questsTable.id })
+  return { ok: true, operation: "quest_delete_all", value: flattenedArray }
 }
 
-export async function wipeAllNotesTableRows(): DeleteManyResult<Note["id"]> {
-  return db.delete(notesTable).returning({ deletedId: notesTable.id })
+export async function wipeAllNotesTableRows(): Promise<OperationResult<Note["id"][]>> {
+  const deletedRowIDs = await db.delete(notesTable).returning({ id: notesTable.id })
+  const flattenedArray = deletedRowIDs.map((obj) => obj.id)
+
+  return { ok: true, operation: "notes_delete_all", value: flattenedArray }
 }
 
-export async function wipeAllProgressTableRows(): DeleteManyResult<Progress["id"]> {
-  return db.delete(progressTable).returning({ deletedId: progressTable.id })
+export async function wipeAllProgressTableRows(): Promise<OperationResult<Progress["id"][]>> {
+  const deletedRowIDs = await db.delete(progressTable).returning({ id: progressTable.id })
+  const flattenedArray = deletedRowIDs.map((obj) => obj.id)
+
+  return { ok: true, operation: "progresses_delete_all", value: flattenedArray }
 }
 
-export async function deleteQuestById(id: Quest["id"]): DeleteResult<Quest["id"]> {
-  const [deletedId] = await db
+export async function deleteQuestById(id: Quest["id"]): Promise<OperationResult<Quest["id"]>> {
+  const [deletedRowId] = await db
     .delete(questsTable)
     .where(eq(questsTable.id, id))
-    .returning({ deletedId: questsTable.id })
+    .returning({ id: questsTable.id })
 
-  if (deletedId) return deletedId
-
-  return null
+  if (!deletedRowId) return { ok: false, operation: "quest_delete_by_id", error: "FAILED_TO_DELETE" }
+  return { ok: true, operation: "quest_delete_by_id", value: deletedRowId.id }
 }
 
-export async function deleteNoteById(id: Note["id"]): DeleteResult<Note["id"]> {
-  const [deletedId] = await db
+export async function deleteNoteById(id: Note["id"]): Promise<OperationResult<Note["id"]>> {
+  const [deletedRowId] = await db
     .delete(notesTable)
     .where(eq(notesTable.id, id))
-    .returning({ deletedId: notesTable.id })
+    .returning({ id: notesTable.id })
 
-  if (deletedId) return deletedId
-
-  return null
+  if (!deletedRowId) return { ok: false, operation: "notes_delete_by_id", error: "FAILED_TO_DELETE" }
+  return { ok: true, operation: "notes_delete_by_id", value: deletedRowId.id }
 }
 
-export async function deleteProgressById(id: Progress["id"]): DeleteResult<Progress["id"]> {
-  const [deletedId] = await db
+export async function deleteProgressById(id: Progress["id"]): Promise<OperationResult<Progress["id"]>> {
+  const [deletedRowId] = await db
     .delete(progressTable)
     .where(eq(progressTable.id, id))
-    .returning({ deletedId: progressTable.id })
+    .returning({ id: notesTable.id })
 
-  if (deletedId) return deletedId
-
-  return null
+  if (!deletedRowId) return { ok: false, operation: "progresses_delete_by_id", error: "FAILED_TO_DELETE" }
+  return { ok: true, operation: "progresses_delete_by_id", value: deletedRowId.id }
 }
