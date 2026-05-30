@@ -1,9 +1,10 @@
 import { asc, desc, eq, type InferSelectModel } from "drizzle-orm"
+import { type Note, type Progress, type Quest } from "@lore/core"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
-import { type Note, type Progress, type Quest } from "@lore/core"
 import type { ErrorCode } from "./errors"
 import { mapNoteDBToDomain, mapProgressDBToDomain, mapQuestDBToDomain } from "./parsers"
+import { safeQuery } from "./helpers"
 
 const operations = [
   // quest operations
@@ -41,7 +42,7 @@ type OperationResult<T> =
   | {
       ok: false
       operation: OperationKind
-      error: ErrorCode
+      error: ErrorCode | Error
     }
 
 const DEFAULT_OFFSET = 0
@@ -61,16 +62,21 @@ export function getQuests(
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
 ): OperationResult<Quest[]> {
-  const rows = db
-    .select()
-    .from(questsTable)
-    .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
-    .limit(limit)
-    .offset(offset)
-    .all()
+  const q = safeQuery(() =>
+    db
+      .select()
+      .from(questsTable)
+      .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
+      .limit(limit)
+      .offset(offset)
+      .all()
+  )
+  if (!q.ok) return { ok: false, operation: "quests_get_all", error: q.error }
+
+  const selectedRows = q.value
 
   const quests: Quest[] = []
-  for (const row of rows) {
+  for (const row of selectedRows) {
     const result = mapQuestDBToDomain(row)
     if (!result.ok) return { ok: false, operation: "quests_get_all", error: result.error }
 
@@ -96,16 +102,21 @@ export function getNotes(
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
 ): OperationResult<Note[]> {
-  const rows = db
-    .select()
-    .from(notesTable)
-    .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
-    .limit(limit)
-    .offset(offset)
-    .all()
+  const q = safeQuery(() =>
+    db
+      .select()
+      .from(notesTable)
+      .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
+      .limit(limit)
+      .offset(offset)
+      .all()
+  )
+  if (!q.ok) return { ok: false, operation: "notes_get_all", error: q.error }
+
+  const selectedRows = q.value
 
   const notes: Note[] = []
-  for (const row of rows) {
+  for (const row of selectedRows) {
     const result = mapNoteDBToDomain(row)
     if (!result.ok) return { ok: false, operation: "notes_get_all", error: result.error }
 
@@ -131,16 +142,21 @@ export function getProgresses(
   limit: number = DEFAULT_LIMIT,
   offset: number = DEFAULT_OFFSET
 ): OperationResult<Progress[]> {
-  const rows = db
-    .select()
-    .from(progressTable)
-    .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
-    .limit(limit)
-    .offset(offset)
-    .all()
+  const q = safeQuery(() =>
+    db
+      .select()
+      .from(progressTable)
+      .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
+      .limit(limit)
+      .offset(offset)
+      .all()
+  )
+  if (!q.ok) return { ok: false, operation: "progresses_get_all", error: q.error }
+
+  const selectedRows = q.value
 
   const progresses: Progress[] = []
-  for (const row of rows) {
+  for (const row of selectedRows) {
     const result = mapProgressDBToDomain(row)
     if (!result.ok) return { ok: false, operation: "progresses_get_all", error: result.error }
 
@@ -155,7 +171,10 @@ export function getProgresses(
 }
 
 export function getQuestById(id: Quest["id"]): OperationResult<Quest | null> {
-  const selectedRow = db.select().from(questsTable).where(eq(questsTable.id, id)).get()
+  const q = safeQuery(() => db.select().from(questsTable).where(eq(questsTable.id, id)).get())
+  if (!q.ok) return { ok: false, operation: "quest_get_by_id", error: q.error }
+
+  const selectedRow = q.value
   if (!selectedRow) return { ok: true, operation: "quest_get_by_id", value: null }
 
   const result = mapQuestDBToDomain(selectedRow)
@@ -165,7 +184,10 @@ export function getQuestById(id: Quest["id"]): OperationResult<Quest | null> {
 }
 
 export function getNoteById(id: Note["id"]): OperationResult<Note | null> {
-  const selectedRow = db.select().from(notesTable).where(eq(notesTable.id, id)).get()
+  const q = safeQuery(() => db.select().from(notesTable).where(eq(notesTable.id, id)).get())
+  if (!q.ok) return { ok: false, operation: "notes_get_by_id", error: q.error }
+
+  const selectedRow = q.value
   if (!selectedRow) return { ok: true, operation: "notes_get_by_id", value: null }
 
   const result = mapNoteDBToDomain(selectedRow)
@@ -175,7 +197,10 @@ export function getNoteById(id: Note["id"]): OperationResult<Note | null> {
 }
 
 export function getProgressById(id: Progress["id"]): OperationResult<Note | null> {
-  const selectedRow = db.select().from(progressTable).where(eq(progressTable.id, id)).get()
+  const q = safeQuery(() => db.select().from(progressTable).where(eq(progressTable.id, id)).get())
+  if (!q.ok) return { ok: false, operation: "progresses_get_by_id", error: q.error }
+
+  const selectedRow = q.value
   if (!selectedRow) return { ok: true, operation: "progresses_get_by_id", value: null }
 
   const result = mapProgressDBToDomain(selectedRow)
@@ -192,8 +217,10 @@ export type CreateQuestValues = {
   status: Quest["status"]
 }
 export function insertQuest(values: CreateQuestValues): OperationResult<Quest> {
-  const insertedRow = db.insert(questsTable).values(values).returning().get()
+  const q = safeQuery(() => db.insert(questsTable).values(values).returning().get())
+  if (!q.ok) return { ok: false, operation: "quest_insert", error: q.error }
 
+  const insertedRow = q.value
   if (!insertedRow) return { ok: false, operation: "quest_insert", error: "FAILED_TO_INSERT" }
 
   const result = mapQuestDBToDomain(insertedRow)
@@ -204,7 +231,10 @@ export function insertQuest(values: CreateQuestValues): OperationResult<Quest> {
 
 export type CreateNoteValue = Pick<typeof notesTable.$inferInsert, "text" | "questId">
 export function insertNote(note: CreateNoteValue): OperationResult<Note> {
-  const insertedRow = db.insert(notesTable).values(note).returning().get()
+  const q = safeQuery(() => db.insert(notesTable).values(note).returning().get())
+  if (!q.ok) return { ok: false, operation: "notes_insert", error: q.error }
+
+  const insertedRow = q.value
   if (!insertedRow) return { ok: false, operation: "notes_insert", error: "FAILED_TO_INSERT" }
 
   const result = mapNoteDBToDomain(insertedRow)
@@ -215,16 +245,18 @@ export function insertNote(note: CreateNoteValue): OperationResult<Note> {
 
 export type CreateProgress = Pick<typeof progressTable.$inferInsert, "text" | "questId">
 export function insertProgress(progress: CreateProgress) {
-  const insertedRow = db.insert(progressTable).values(progress).returning().get()
-  if (!insertedRow) return { ok: false, operation: "progresses_insert", error: "FAILED_TO_INSERT" }
+  const q = safeQuery(() => db.insert(progressTable).values(progress).returning().get())
+  if (!q.ok) return { ok: false, operation: "progress_insert", error: q.error }
+
+  const insertedRow = q.value
+  if (!insertedRow) return { ok: false, operation: "progress_insert", error: "FAILED_TO_INSERT" }
 
   const result = mapNoteDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "progresses_insert", error: result.error }
+  if (!result.ok) return { ok: false, operation: "progress_insert", error: result.error }
 
   return { ok: true, operation: "progress_insert", value: result.value }
 }
 
-// update:
 export type UpdateQuestValues = Partial<Pick<Quest, "kind" | "title" | "description" | "status">>
 export function updateQuest(id: Quest["id"], values: UpdateQuestValues): OperationResult<Quest> {
   // add the timestamp of new status if changed (to the sqlite table shape on the fly)
@@ -239,10 +271,13 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
     if (values.status === "removed") u.removedAt = t
   }
 
-  const updatedRow = db.update(questsTable).set(u).where(eq(questsTable.id, id)).returning().get()
-  if (!updatedRow) return { ok: false, operation: "quest_update", error: "FAILED_TO_UPDATE" }
+  const q = safeQuery(() => db.update(questsTable).set(u).where(eq(questsTable.id, id)).returning().get())
+  if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
 
-  const result = mapQuestDBToDomain(updatedRow)
+  const insertedRow = q.value
+  if (!insertedRow) return { ok: false, operation: "quest_update", error: "FAILED_TO_UPDATE" }
+
+  const result = mapQuestDBToDomain(insertedRow)
   if (!result.ok) return { ok: false, operation: "quest_update", error: result.error }
 
   return { ok: true, operation: "quest_update", value: result.value }
@@ -250,10 +285,13 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
 
 export type UpdateNoteValues = Pick<Note, "text">
 export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationResult<Note> {
-  const updatedRow = db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning().get()
-  if (!updatedRow) return { ok: false, operation: "notes_update", error: "FAILED_TO_UPDATE" }
+  const q = safeQuery(() => db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning().get())
+  if (!q.ok) return { ok: false, operation: "notes_update", error: q.error }
 
-  const result = mapNoteDBToDomain(updatedRow)
+  const insertedRow = q.value
+  if (!insertedRow) return { ok: false, operation: "notes_update", error: "FAILED_TO_UPDATE" }
+
+  const result = mapNoteDBToDomain(insertedRow)
   if (!result.ok) return { ok: false, operation: "notes_update", error: result.error }
 
   return { ok: true, operation: "notes_update", value: result.value }
@@ -261,65 +299,82 @@ export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationR
 
 export type UpdateProgressValues = Pick<Progress, "text">
 export function updateProgress(id: Progress["id"], values: UpdateProgressValues): OperationResult<Progress> {
-  const updatedRow = db.update(progressTable).set(values).where(eq(progressTable.id, id)).returning().get()
-  if (!updatedRow) return { ok: false, operation: "progresses_update", error: "FAILED_TO_UPDATE" }
+  const q = safeQuery(() =>
+    db.update(progressTable).set(values).where(eq(progressTable.id, id)).returning().get()
+  )
+  if (!q.ok) return { ok: false, operation: "progresses_update", error: q.error }
 
-  const result = mapProgressDBToDomain(updatedRow)
+  const insertedRow = q.value
+  if (!insertedRow) return { ok: false, operation: "progresses_update", error: "FAILED_TO_UPDATE" }
+
+  const result = mapProgressDBToDomain(insertedRow)
   if (!result.ok) return { ok: false, operation: "progresses_update", error: result.error }
 
   return { ok: true, operation: "progresses_update", value: result.value }
 }
 
 export function wipeAllQuestsTableRows(): OperationResult<Quest["id"][]> {
-  const deletedRowIDs = db.delete(questsTable).returning({ id: questsTable.id }).all()
+  const q = safeQuery(() => db.delete(questsTable).returning({ id: questsTable.id }).all())
+  if (!q.ok) return { ok: false, operation: "quest_delete_all", error: q.error }
+
+  const deletedRowIDs = q.value
   const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
   return { ok: true, operation: "quest_delete_all", value: flattenedArray }
 }
 
 export function wipeAllNotesTableRows(): OperationResult<Note["id"][]> {
-  const deletedRowIDs = db.delete(notesTable).returning({ id: notesTable.id }).all()
+  const q = safeQuery(() => db.delete(notesTable).returning({ id: notesTable.id }).all())
+  if (!q.ok) return { ok: false, operation: "notes_delete_all", error: q.error }
+
+  const deletedRowIDs = q.value
   const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
   return { ok: true, operation: "notes_delete_all", value: flattenedArray }
 }
 
 export function wipeAllProgressTableRows(): OperationResult<Progress["id"][]> {
-  const deletedRowIDs = db.delete(progressTable).returning({ id: progressTable.id }).all()
+  const q = safeQuery(() => db.delete(progressTable).returning({ id: progressTable.id }).all())
+  if (!q.ok) return { ok: false, operation: "progresses_delete_all", error: q.error }
+
+  const deletedRowIDs = q.value
   const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
   return { ok: true, operation: "progresses_delete_all", value: flattenedArray }
 }
 
 export function deleteQuestById(id: Quest["id"]): OperationResult<Quest["id"]> {
-  const deletedRowId = db
-    .delete(questsTable)
-    .where(eq(questsTable.id, id))
-    .returning({ id: questsTable.id })
-    .get()
-  if (!deletedRowId) return { ok: false, operation: "quest_delete_by_id", error: "FAILED_TO_DELETE" }
+  const q = safeQuery(() =>
+    db.delete(questsTable).where(eq(questsTable.id, id)).returning({ id: questsTable.id }).get()
+  )
+  if (!q.ok) return { ok: false, operation: "quest_delete_by_id", error: q.error }
 
-  return { ok: true, operation: "quest_delete_by_id", value: deletedRowId.id }
+  const deletedRow = q.value
+  if (!deletedRow) return { ok: false, operation: "quest_delete_by_id", error: "FAILED_TO_DELETE" }
+
+  return { ok: true, operation: "quest_delete_by_id", value: deletedRow.id }
 }
 
 export function deleteNoteById(id: Note["id"]): OperationResult<Note["id"]> {
-  const deletedRowId = db
-    .delete(notesTable)
-    .where(eq(notesTable.id, id))
-    .returning({ id: notesTable.id })
-    .get()
-  if (!deletedRowId) return { ok: false, operation: "notes_delete_by_id", error: "FAILED_TO_DELETE" }
+  const q = safeQuery(() =>
+    db.delete(notesTable).where(eq(notesTable.id, id)).returning({ id: notesTable.id }).get()
+  )
+  if (!q.ok) return { ok: false, operation: "notes_delete_by_id", error: q.error }
 
-  return { ok: true, operation: "notes_delete_by_id", value: deletedRowId.id }
+  const deletedRow = q.value
+  if (!deletedRow) return { ok: false, operation: "notes_delete_by_id", error: "FAILED_TO_DELETE" }
+
+  return { ok: true, operation: "notes_delete_by_id", value: deletedRow.id }
 }
 
 export function deleteProgressById(id: Progress["id"]): OperationResult<Progress["id"]> {
-  const deletedRowId = db
-    .delete(progressTable)
-    .where(eq(progressTable.id, id))
-    .returning({ id: notesTable.id })
-    .get()
-  if (!deletedRowId) return { ok: false, operation: "progresses_delete_by_id", error: "FAILED_TO_DELETE" }
+  const q = safeQuery(() =>
+    db.delete(progressTable).where(eq(progressTable.id, id)).returning({ id: notesTable.id }).get()
+  )
+  if (!q.ok) return { ok: false, operation: "progresses_delete_by_id", error: q.error }
 
-  return { ok: true, operation: "progresses_delete_by_id", value: deletedRowId.id }
+  const deletedRow = q.value
+  if (!deletedRow) return { ok: false, operation: "progresses_delete_by_id", error: "FAILED_TO_DELETE" }
+
+  return { ok: true, operation: "progresses_delete_by_id", value: deletedRow.id }
 }
