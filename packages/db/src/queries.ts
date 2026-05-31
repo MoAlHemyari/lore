@@ -45,30 +45,29 @@ type OperationResult<T> =
       error: ErrorCode | Error
     }
 
-const DEFAULT_OFFSET = 0
-const DEFAULT_LIMIT = 10
+const DEFAULT_PAGE_SIZE = 10
 
 type GenericOrderByFields = "createdAt" | "updatedAt"
 
 type QuestOrderByFields = GenericOrderByFields | "kind" | "status"
 export function getQuests(
+  page: number = 0,
+  pageSize: number = DEFAULT_PAGE_SIZE,
   order: {
     sort: "asc" | "desc"
     field: QuestOrderByFields
   } = {
     sort: "desc",
     field: "createdAt"
-  },
-  limit: number = DEFAULT_LIMIT,
-  offset: number = DEFAULT_OFFSET
+  }
 ): OperationResult<Quest[]> {
   const q = safeQuery(() =>
     db
       .select()
       .from(questsTable)
       .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
-      .limit(limit)
-      .offset(offset)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
       .all()
   )
   if (!q.ok) return { ok: false, operation: "quests_get_all", error: q.error }
@@ -92,23 +91,23 @@ export function getQuests(
 
 type NotesOrderByFields = GenericOrderByFields | "questId"
 export function getNotes(
+  page: number = 0,
+  pageSize: number = DEFAULT_PAGE_SIZE,
   order: {
     sort: "asc" | "desc"
     field: NotesOrderByFields
   } = {
     sort: "desc",
     field: "createdAt"
-  },
-  limit: number = DEFAULT_LIMIT,
-  offset: number = DEFAULT_OFFSET
+  }
 ): OperationResult<Note[]> {
   const q = safeQuery(() =>
     db
       .select()
       .from(notesTable)
       .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
-      .limit(limit)
-      .offset(offset)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
       .all()
   )
   if (!q.ok) return { ok: false, operation: "notes_get_all", error: q.error }
@@ -132,23 +131,23 @@ export function getNotes(
 
 type ProgressOrderByFields = GenericOrderByFields | "questId"
 export function getProgresses(
+  page: number = 0,
+  pageSize: number = DEFAULT_PAGE_SIZE,
   order: {
     sort: "asc" | "desc"
     field: ProgressOrderByFields
   } = {
     sort: "desc",
     field: "createdAt"
-  },
-  limit: number = DEFAULT_LIMIT,
-  offset: number = DEFAULT_OFFSET
+  }
 ): OperationResult<Progress[]> {
   const q = safeQuery(() =>
     db
       .select()
       .from(progressTable)
       .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
-      .limit(limit)
-      .offset(offset)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
       .all()
   )
   if (!q.ok) return { ok: false, operation: "progresses_get_all", error: q.error }
