@@ -195,7 +195,7 @@ export function getNoteById(id: Note["id"]): OperationResult<Note | null> {
   return { ok: true, operation: "notes_get_by_id", value: result.value }
 }
 
-export function getProgressById(id: Progress["id"]): OperationResult<Note | null> {
+export function getProgressById(id: Progress["id"]): OperationResult<Progress | null> {
   const q = safeQuery(() => db.select().from(progressTable).where(eq(progressTable.id, id)).get())
   if (!q.ok) return { ok: false, operation: "progresses_get_by_id", error: q.error }
 
@@ -243,17 +243,17 @@ export function insertNote(note: CreateNoteValue): OperationResult<Note> {
 }
 
 export type CreateProgress = Pick<typeof progressTable.$inferInsert, "text" | "questId">
-export function insertProgress(progress: CreateProgress) {
+export function insertProgress(progress: CreateProgress): OperationResult<Progress> {
   const q = safeQuery(() => db.insert(progressTable).values(progress).returning().get())
-  if (!q.ok) return { ok: false, operation: "progress_insert", error: q.error }
+  if (!q.ok) return { ok: false, operation: "progresses_insert", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "progress_insert", error: { code: "FAILED_TO_INSERT" } }
+  if (!insertedRow) return { ok: false, operation: "progresses_insert", error: { code: "FAILED_TO_INSERT" } }
 
-  const result = mapNoteDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "progress_insert", error: { code: result.error } }
+  const result = mapProgressDBToDomain(insertedRow)
+  if (!result.ok) return { ok: false, operation: "progresses_insert", error: { code: result.error } }
 
-  return { ok: true, operation: "progress_insert", value: result.value }
+  return { ok: true, operation: "progresses_insert", value: result.value }
 }
 
 export type UpdateQuestValues = Partial<Pick<Quest, "kind" | "title" | "description" | "status">>
@@ -368,7 +368,7 @@ export function deleteNoteById(id: Note["id"]): OperationResult<Note["id"]> {
 
 export function deleteProgressById(id: Progress["id"]): OperationResult<Progress["id"]> {
   const q = safeQuery(() =>
-    db.delete(progressTable).where(eq(progressTable.id, id)).returning({ id: notesTable.id }).get()
+    db.delete(progressTable).where(eq(progressTable.id, id)).returning({ id: progressTable.id }).get()
   )
   if (!q.ok) return { ok: false, operation: "progresses_delete_by_id", error: q.error }
 
