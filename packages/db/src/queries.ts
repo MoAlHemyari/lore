@@ -2,7 +2,7 @@ import { asc, desc, eq, type InferSelectModel } from "drizzle-orm"
 import { type Note, type Progress, type Quest } from "@lore/core"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
-import type { ErrorCode } from "./errors"
+import type { DBError, ErrorCode } from "./errors"
 import { mapNoteDBToDomain, mapProgressDBToDomain, mapQuestDBToDomain } from "./parsers"
 import { safeQuery } from "./helpers"
 
@@ -42,7 +42,7 @@ type OperationResult<T> =
   | {
       ok: false
       operation: OperationKind
-      error: ErrorCode | Error
+      error: DBError
     }
 
 const DEFAULT_PAGE_SIZE = 10
@@ -77,7 +77,7 @@ export function getQuests(
   const quests: Quest[] = []
   for (const row of selectedRows) {
     const result = mapQuestDBToDomain(row)
-    if (!result.ok) return { ok: false, operation: "quests_get_all", error: result.error }
+    if (!result.ok) return { ok: false, operation: "quests_get_all", error: { code: result.error } }
 
     quests.push(result.value)
   }
@@ -117,7 +117,7 @@ export function getNotes(
   const notes: Note[] = []
   for (const row of selectedRows) {
     const result = mapNoteDBToDomain(row)
-    if (!result.ok) return { ok: false, operation: "notes_get_all", error: result.error }
+    if (!result.ok) return { ok: false, operation: "notes_get_all", error: { code: result.error } }
 
     notes.push(result.value)
   }
@@ -157,7 +157,7 @@ export function getProgresses(
   const progresses: Progress[] = []
   for (const row of selectedRows) {
     const result = mapProgressDBToDomain(row)
-    if (!result.ok) return { ok: false, operation: "progresses_get_all", error: result.error }
+    if (!result.ok) return { ok: false, operation: "progresses_get_all", error: { code: result.error } }
 
     progresses.push(result.value)
   }
@@ -177,7 +177,7 @@ export function getQuestById(id: Quest["id"]): OperationResult<Quest | null> {
   if (!selectedRow) return { ok: true, operation: "quest_get_by_id", value: null }
 
   const result = mapQuestDBToDomain(selectedRow)
-  if (!result.ok) return { ok: false, operation: "quest_get_by_id", error: result.error }
+  if (!result.ok) return { ok: false, operation: "quest_get_by_id", error: { code: result.error } }
 
   return { ok: true, operation: "quest_get_by_id", value: result.value }
 }
@@ -190,7 +190,7 @@ export function getNoteById(id: Note["id"]): OperationResult<Note | null> {
   if (!selectedRow) return { ok: true, operation: "notes_get_by_id", value: null }
 
   const result = mapNoteDBToDomain(selectedRow)
-  if (!result.ok) return { ok: false, operation: "notes_get_by_id", error: result.error }
+  if (!result.ok) return { ok: false, operation: "notes_get_by_id", error: { code: result.error } }
 
   return { ok: true, operation: "notes_get_by_id", value: result.value }
 }
@@ -203,7 +203,7 @@ export function getProgressById(id: Progress["id"]): OperationResult<Note | null
   if (!selectedRow) return { ok: true, operation: "progresses_get_by_id", value: null }
 
   const result = mapProgressDBToDomain(selectedRow)
-  if (!result.ok) return { ok: false, operation: "progresses_get_by_id", error: result.error }
+  if (!result.ok) return { ok: false, operation: "progresses_get_by_id", error: { code: result.error } }
 
   return { ok: true, operation: "progresses_get_by_id", value: result.value }
 }
@@ -220,10 +220,10 @@ export function insertQuest(values: CreateQuestValues): OperationResult<Quest> {
   if (!q.ok) return { ok: false, operation: "quest_insert", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "quest_insert", error: "FAILED_TO_INSERT" }
+  if (!insertedRow) return { ok: false, operation: "quest_insert", error: { code: "FAILED_TO_INSERT" } }
 
   const result = mapQuestDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "quest_insert", error: result.error }
+  if (!result.ok) return { ok: false, operation: "quest_insert", error: { code: result.error } }
 
   return { ok: true, operation: "quest_insert", value: result.value }
 }
@@ -234,10 +234,10 @@ export function insertNote(note: CreateNoteValue): OperationResult<Note> {
   if (!q.ok) return { ok: false, operation: "notes_insert", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "notes_insert", error: "FAILED_TO_INSERT" }
+  if (!insertedRow) return { ok: false, operation: "notes_insert", error: { code: "FAILED_TO_INSERT" } }
 
   const result = mapNoteDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "notes_insert", error: result.error }
+  if (!result.ok) return { ok: false, operation: "notes_insert", error: { code: result.error } }
 
   return { ok: true, operation: "notes_insert", value: result.value }
 }
@@ -248,10 +248,10 @@ export function insertProgress(progress: CreateProgress) {
   if (!q.ok) return { ok: false, operation: "progress_insert", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "progress_insert", error: "FAILED_TO_INSERT" }
+  if (!insertedRow) return { ok: false, operation: "progress_insert", error: { code: "FAILED_TO_INSERT" } }
 
   const result = mapNoteDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "progress_insert", error: result.error }
+  if (!result.ok) return { ok: false, operation: "progress_insert", error: { code: result.error } }
 
   return { ok: true, operation: "progress_insert", value: result.value }
 }
@@ -274,10 +274,10 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
   if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "quest_update", error: "FAILED_TO_UPDATE" }
+  if (!insertedRow) return { ok: false, operation: "quest_update", error: { code: "FAILED_TO_UPDATE" } }
 
   const result = mapQuestDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "quest_update", error: result.error }
+  if (!result.ok) return { ok: false, operation: "quest_update", error: { code: result.error } }
 
   return { ok: true, operation: "quest_update", value: result.value }
 }
@@ -288,10 +288,10 @@ export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationR
   if (!q.ok) return { ok: false, operation: "notes_update", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "notes_update", error: "FAILED_TO_UPDATE" }
+  if (!insertedRow) return { ok: false, operation: "notes_update", error: { code: "FAILED_TO_UPDATE" } }
 
   const result = mapNoteDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "notes_update", error: result.error }
+  if (!result.ok) return { ok: false, operation: "notes_update", error: { code: result.error } }
 
   return { ok: true, operation: "notes_update", value: result.value }
 }
@@ -304,10 +304,10 @@ export function updateProgress(id: Progress["id"], values: UpdateProgressValues)
   if (!q.ok) return { ok: false, operation: "progresses_update", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "progresses_update", error: "FAILED_TO_UPDATE" }
+  if (!insertedRow) return { ok: false, operation: "progresses_update", error: { code: "FAILED_TO_UPDATE" } }
 
   const result = mapProgressDBToDomain(insertedRow)
-  if (!result.ok) return { ok: false, operation: "progresses_update", error: result.error }
+  if (!result.ok) return { ok: false, operation: "progresses_update", error: { code: result.error } }
 
   return { ok: true, operation: "progresses_update", value: result.value }
 }
@@ -349,7 +349,7 @@ export function deleteQuestById(id: Quest["id"]): OperationResult<Quest["id"]> {
   if (!q.ok) return { ok: false, operation: "quest_delete_by_id", error: q.error }
 
   const deletedRow = q.value
-  if (!deletedRow) return { ok: false, operation: "quest_delete_by_id", error: "FAILED_TO_DELETE" }
+  if (!deletedRow) return { ok: false, operation: "quest_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
 
   return { ok: true, operation: "quest_delete_by_id", value: deletedRow.id }
 }
@@ -361,7 +361,7 @@ export function deleteNoteById(id: Note["id"]): OperationResult<Note["id"]> {
   if (!q.ok) return { ok: false, operation: "notes_delete_by_id", error: q.error }
 
   const deletedRow = q.value
-  if (!deletedRow) return { ok: false, operation: "notes_delete_by_id", error: "FAILED_TO_DELETE" }
+  if (!deletedRow) return { ok: false, operation: "notes_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
 
   return { ok: true, operation: "notes_delete_by_id", value: deletedRow.id }
 }
@@ -373,7 +373,8 @@ export function deleteProgressById(id: Progress["id"]): OperationResult<Progress
   if (!q.ok) return { ok: false, operation: "progresses_delete_by_id", error: q.error }
 
   const deletedRow = q.value
-  if (!deletedRow) return { ok: false, operation: "progresses_delete_by_id", error: "FAILED_TO_DELETE" }
+  if (!deletedRow)
+    return { ok: false, operation: "progresses_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
 
   return { ok: true, operation: "progresses_delete_by_id", value: deletedRow.id }
 }

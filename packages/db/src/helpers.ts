@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
+import type { DBError } from "./errors"
 
 /**
  * Generates an SQL check constraint for an IN operator.
@@ -24,12 +25,26 @@ type SafeQueryResult<T> =
     }
   | {
       ok: false
-      error: Error
+      error: DBError
     }
 export function safeQuery<T>(operation: () => T): SafeQueryResult<T> {
   try {
     return { ok: true, value: operation() }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error : new Error(String(error)) }
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? {
+              code: "DB_CONNECTION_ERROR",
+              message: error.message,
+              cause: error.cause,
+              name: error.name,
+              stack: error.stack
+            }
+          : {
+              code: "DB_CONNECTION_ERROR"
+            }
+    }
   }
 }
