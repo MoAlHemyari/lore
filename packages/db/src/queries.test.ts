@@ -448,7 +448,6 @@ describe("lifecycles", () => {
 
     test("cascade quest remove", () => {
       const note1_1 = getNoteById(note1.value.id)
-      console.log(note1_1)
       if (!note1_1.ok) throw new Error(note1_1.error.code)
       if (!note1_1.value) throw new Error("Couldn't be found")
 

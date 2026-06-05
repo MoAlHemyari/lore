@@ -2,7 +2,7 @@ interface BaseCoreEntity {
   id: string
   createdAt: Date
   removedAt: Date | null
-  updatedAt: Date | null
+  updatedAt: Date
 }
 
 export const questKinds = { MAIN: "main", SIDE: "side" } as const
@@ -22,8 +22,6 @@ export interface Quest extends BaseCoreEntity {
   kind: QuestKind
   title: string
   description: string
-  notes: Note["id"][]
-  progress: Progress["id"][]
   status: QuestLifecycleStatus
 
   pausedAt: Date | null

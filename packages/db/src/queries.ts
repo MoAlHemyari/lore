@@ -267,7 +267,11 @@ type Executer =
   | SQLiteTransaction<"sync", void, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>>
 
 export type UpdateQuestValues = RequireAtLeastOne<Pick<Quest, "kind" | "title" | "description" | "status">>
-export function updateQuest(id: Quest["id"], values: UpdateQuestValues): OperationResult<Quest> {
+export function updateQuest(
+  id: Quest["id"],
+  values: UpdateQuestValues,
+  mode: "restore" | "default" = "default"
+): OperationResult<Quest> {
   if (Object.values(values).length === 0)
     return { ok: false, operation: "quest_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
@@ -275,6 +279,7 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
   if (values.kind) normalizedValues.kind = values.kind
   if (values.title) normalizedValues.title = values.title
   if (values.description) normalizedValues.description = values.description
+  if (mode === "restore" && !("status" in values)) normalizedValues.status = "active"
   if (values.status) {
     normalizedValues.status = values.status
 
@@ -284,25 +289,21 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
     if (values.status === "idle") normalizedValues.idledAt = t
     if (values.status === "paused") normalizedValues.pausedAt = t
     if (values.status === "removed") normalizedValues.removedAt = t
+    if (values.status === "active" && mode === "restore") normalizedValues.removedAt = null
   }
 
-  if (values.status === "removed") {
-    // cascade
-    let txError: null | DBError = null
-    db.transaction((tx) => {
+  let updatedRow
+
+  if (values.status === "removed" || mode === "restore") {
+    // remove or restore flow
+    updatedRow = db.transaction((tx) => {
       const qQuest = safeQuery(() =>
         tx.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
       )
-      if (!qQuest.ok) {
-        txError = qQuest.error
-        return tx.rollback()
-      }
+      if (!qQuest.ok) return tx.rollback()
 
-      const insertedQuestRow = qQuest.value
-      if (!insertedQuestRow) {
-        txError = { code: "FAILED_TO_UPDATE" }
-        return tx.rollback()
-      }
+      const updatedQuestRow = qQuest.value
+      if (!updatedQuestRow) return tx.rollback()
 
       const qNotes = safeQuery(() =>
         tx
@@ -313,16 +314,7 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
           .all()
       )
 
-      if (!qNotes.ok) {
-        txError = qNotes.error
-        return tx.rollback()
-      }
-
-      const insertedNoteRows = qNotes.value
-      if (!insertedNoteRows) {
-        txError = { code: "FAILED_TO_UPDATE" }
-        return tx.rollback()
-      }
+      if (!qNotes.ok) return tx.rollback()
 
       const qProgress = safeQuery(() =>
         tx
@@ -333,31 +325,22 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
           .all()
       )
 
-      if (!qProgress.ok) {
-        txError = qProgress.error
-        return tx.rollback()
-      }
+      if (!qProgress.ok) return tx.rollback()
 
-      const insertedProgressRows = qProgress.value
-      if (!insertedProgressRows) {
-        txError = { code: "FAILED_TO_UPDATE" }
-        return tx.rollback()
-      }
+      return updatedQuestRow
     })
+  } else {
+    // not remove or restore flow
+    const q = safeQuery(() =>
+      db.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
+    )
+    if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
 
-    if (txError) return { ok: false, operation: "quest_remove_cascade", error: txError }
+    updatedRow = q.value
+    if (!updatedRow) return { ok: false, operation: "quest_update", error: { code: "FAILED_TO_UPDATE" } }
   }
-  // TODO: restore cascade
 
-  const q = safeQuery(() =>
-    db.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
-  )
-  if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
-
-  const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "quest_update", error: { code: "FAILED_TO_UPDATE" } }
-
-  const result = mapQuestDBToDomain(insertedRow)
+  const result = mapQuestDBToDomain(updatedRow)
   if (!result.ok) return { ok: false, operation: "quest_update", error: { code: result.error } }
 
   return { ok: true, operation: "quest_update", value: result.value }
@@ -500,7 +483,7 @@ export function removeProgress(id: Progress["id"]) {
 }
 
 export function restoreQuest(id: Quest["id"]) {
-  return updateQuest(id, { status: "active" })
+  return updateQuest(id, { status: "active" }, "restore")
 }
 
 export function restoreNote(id: Note["id"]) {
