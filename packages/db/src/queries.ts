@@ -266,6 +266,8 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
   if (values.title) normalizedValues.title = values.title
   if (values.description) normalizedValues.description = values.description
   if (values.status) {
+    normalizedValues.status = values.status
+
     const t = new Date().toISOString()
     if (values.status === "abandoned") normalizedValues.abandonedAt = t
     if (values.status === "completed") normalizedValues.completedAt = t
@@ -421,7 +423,7 @@ export function restoreQuest(id: Quest["id"]) {
 }
 
 export function restoreNote(id: Note["id"]) {
-  return updateProgress(id, { removedAt: null })
+  return updateNote(id, { removedAt: null })
 }
 
 export function restoreProgress(id: Progress["id"]) {

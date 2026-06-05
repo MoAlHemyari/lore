@@ -12,6 +12,12 @@ import {
   insertNote,
   insertProgress,
   insertQuest,
+  removeNote,
+  removeProgress,
+  removeQuest,
+  restoreNote,
+  restoreProgress,
+  restoreQuest,
   updateNote,
   updateProgress,
   updateQuest,
@@ -39,7 +45,7 @@ describe("lifecycles", () => {
         status: "active"
       })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.title).toBe("first quest")
       expect(result.value.description).toBe("")
@@ -60,7 +66,7 @@ describe("lifecycles", () => {
     test("get all", () => {
       const result = getQuests()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
 
@@ -70,7 +76,7 @@ describe("lifecycles", () => {
 
     test("get by id", () => {
       const result = getQuestById(questId)
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).not.toBeNull()
       expect(uuidPattern.test(result.value!.id)).toBeTrue()
@@ -85,7 +91,7 @@ describe("lifecycles", () => {
         kind: "side"
       })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.title).toBe("New updated title")
       expect(result.value.description).toBe("New added description")
@@ -96,7 +102,7 @@ describe("lifecycles", () => {
     test("pause", () => {
       const result = updateQuest(questId, { status: "paused" })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.status).toBe("paused")
       expect(result.value.pausedAt).toBeValidDate()
@@ -105,7 +111,7 @@ describe("lifecycles", () => {
     test("abandon", () => {
       const result = updateQuest(questId, { status: "abandoned" })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.status).toBe("abandoned")
       expect(result.value.abandonedAt).toBeValidDate()
@@ -113,30 +119,30 @@ describe("lifecycles", () => {
     test("complete", () => {
       const result = updateQuest(questId, { status: "completed" })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.status).toBe("completed")
       expect(result.value.completedAt).toBeValidDate()
     })
     test("remove", () => {
-      const result = updateQuest(questId, { status: "removed" })
+      const result = removeQuest(questId)
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.status).toBe("removed")
       expect(result.value.removedAt).toBeValidDate()
     })
-    test("reactivate", () => {
-      const result = updateQuest(questId, { status: "active" })
+    test("reactivate/restore", () => {
+      const result = restoreQuest(questId)
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.status).toBe("active")
     })
     test("delete", () => {
       const result = deleteQuestById(questId)
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBe(questId)
     })
@@ -165,7 +171,7 @@ describe("lifecycles", () => {
 
       const result = wipeAllQuestsTableRows()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
     })
@@ -192,7 +198,7 @@ describe("lifecycles", () => {
         questId: noteQuestId
       })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(uuidPattern.test(result.value.id)).toBeTrue()
       expect(result.value.text).toBe("first note")
@@ -207,17 +213,33 @@ describe("lifecycles", () => {
         text: "updated note title"
       })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.id).toBe(noteId)
       expect(result.value.text).toBe("updated note title")
       expect(result.value.questId).toBe(noteQuestId)
     })
 
+    test("remove", () => {
+      const result = removeNote(noteId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeValidDate()
+    })
+
+    test("restore", () => {
+      const result = restoreNote(noteId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeNull()
+    })
+
     test("delete", () => {
       const result = deleteNoteById(noteId)
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBe(noteId)
     })
@@ -235,7 +257,7 @@ describe("lifecycles", () => {
 
       const result = getNotes()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
       expect(result.value.length).toBeGreaterThan(0)
@@ -248,7 +270,7 @@ describe("lifecycles", () => {
     test("delete all", () => {
       const result = wipeAllNotesTableRows()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
     })
@@ -276,7 +298,7 @@ describe("lifecycles", () => {
       })
 
       expect(result.ok).toBe(true)
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       progressId = result.value.id
 
@@ -293,17 +315,33 @@ describe("lifecycles", () => {
         text: "updated progress"
       })
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value.id).toBe(progressId)
       expect(result.value.text).toBe("updated progress")
       expect(result.value.questId).toBe(progressQuestId)
     })
 
+    test("remove", () => {
+      const result = removeProgress(progressId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeValidDate()
+    })
+
+    test("restore", () => {
+      const result = restoreProgress(progressId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeNull()
+    })
+
     test("delete", () => {
       const result = deleteProgressById(progressId)
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBe(progressId)
     })
@@ -313,17 +351,17 @@ describe("lifecycles", () => {
         text: "second progress",
         questId: progressQuestId
       })
-      if (!progress1.ok) throw new Error("Expected operation to succeed")
+      if (!progress1.ok) throw new Error(progress1.error.code)
 
       const progress2 = insertProgress({
         text: "third progress",
         questId: progressQuestId
       })
-      if (!progress2.ok) throw new Error("Expected operation to succeed")
+      if (!progress2.ok) throw new Error(progress2.error.code)
 
       const result = getProgresses()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
       expect(result.value.length).toBeGreaterThan(0)
@@ -336,7 +374,7 @@ describe("lifecycles", () => {
     test("delete all", () => {
       const result = wipeAllProgressTableRows()
 
-      if (!result.ok) throw new Error("Expected operation to succeed")
+      if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
     })
