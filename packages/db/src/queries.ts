@@ -1,8 +1,8 @@
-import { asc, desc, eq, type InferSelectModel } from "drizzle-orm"
+import { asc, desc, eq, type RequireAtLeastOne } from "drizzle-orm"
 import { type Note, type Progress, type Quest } from "@lore/core"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
-import type { DBError, ErrorCode } from "./errors"
+import type { DBError } from "./errors"
 import { mapNoteDBToDomain, mapProgressDBToDomain, mapQuestDBToDomain } from "./parsers"
 import { safeQuery } from "./helpers"
 
@@ -256,21 +256,27 @@ export function insertProgress(progress: CreateProgress): OperationResult<Progre
   return { ok: true, operation: "progresses_insert", value: result.value }
 }
 
-export type UpdateQuestValues = Partial<Pick<Quest, "kind" | "title" | "description" | "status">>
+export type UpdateQuestValues = RequireAtLeastOne<Pick<Quest, "kind" | "title" | "description" | "status">>
 export function updateQuest(id: Quest["id"], values: UpdateQuestValues): OperationResult<Quest> {
-  // add the timestamp of new status if changed (to the sqlite table shape on the fly)
-  let u: Partial<InferSelectModel<typeof questsTable>> = { ...values }
+  if (Object.values(values).length === 0)
+    return { ok: false, operation: "quest_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
+  const normalizedValues: Partial<typeof questsTable.$inferInsert> = {}
+  if (values.kind) normalizedValues.kind = values.kind
+  if (values.title) normalizedValues.title = values.title
+  if (values.description) normalizedValues.description = values.description
   if (values.status) {
     const t = new Date().toISOString()
-    if (values.status === "abandoned") u.abandonedAt = t
-    if (values.status === "completed") u.completedAt = t
-    if (values.status === "idle") u.idledAt = t
-    if (values.status === "paused") u.pausedAt = t
-    if (values.status === "removed") u.removedAt = t
+    if (values.status === "abandoned") normalizedValues.abandonedAt = t
+    if (values.status === "completed") normalizedValues.completedAt = t
+    if (values.status === "idle") normalizedValues.idledAt = t
+    if (values.status === "paused") normalizedValues.pausedAt = t
+    if (values.status === "removed") normalizedValues.removedAt = t
   }
 
-  const q = safeQuery(() => db.update(questsTable).set(u).where(eq(questsTable.id, id)).returning().get())
+  const q = safeQuery(() =>
+    db.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
+  )
   if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
 
   const insertedRow = q.value
@@ -282,9 +288,19 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
   return { ok: true, operation: "quest_update", value: result.value }
 }
 
-export type UpdateNoteValues = Pick<Note, "text">
+export type UpdateNoteValues = RequireAtLeastOne<Note, "text" | "removedAt">
 export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationResult<Note> {
-  const q = safeQuery(() => db.update(notesTable).set(values).where(eq(notesTable.id, id)).returning().get())
+  if (Object.values(values).length === 0)
+    return { ok: false, operation: "notes_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
+
+  const normalizedValues: Partial<Pick<typeof notesTable.$inferInsert, "text" | "removedAt">> = {}
+  if ("text" in values) normalizedValues.text = values.text // note: `if (values.text)` skips empty string
+  if (values.removedAt) normalizedValues.removedAt = values.removedAt.toISOString()
+  if (values.removedAt === null) normalizedValues.removedAt = null
+
+  const q = safeQuery(() =>
+    db.update(notesTable).set(normalizedValues).where(eq(notesTable.id, id)).returning().get()
+  )
   if (!q.ok) return { ok: false, operation: "notes_update", error: q.error }
 
   const insertedRow = q.value
@@ -296,10 +312,18 @@ export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationR
   return { ok: true, operation: "notes_update", value: result.value }
 }
 
-export type UpdateProgressValues = Pick<Progress, "text">
+export type UpdateProgressValues = RequireAtLeastOne<Pick<Progress, "text" | "removedAt">>
 export function updateProgress(id: Progress["id"], values: UpdateProgressValues): OperationResult<Progress> {
+  if (Object.values(values).length === 0)
+    return { ok: false, operation: "progresses_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
+
+  const normalizedValues: Partial<Pick<typeof progressTable.$inferInsert, "text" | "removedAt">> = {}
+  if ("text" in values) normalizedValues.text = values.text // note: `if (values.text)` skips empty string
+  if (values.removedAt) normalizedValues.removedAt = values.removedAt.toISOString()
+  if (values.removedAt === null) normalizedValues.removedAt = null
+
   const q = safeQuery(() =>
-    db.update(progressTable).set(values).where(eq(progressTable.id, id)).returning().get()
+    db.update(progressTable).set(normalizedValues).where(eq(progressTable.id, id)).returning().get()
   )
   if (!q.ok) return { ok: false, operation: "progresses_update", error: q.error }
 
@@ -377,4 +401,29 @@ export function deleteProgressById(id: Progress["id"]): OperationResult<Progress
     return { ok: false, operation: "progresses_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
 
   return { ok: true, operation: "progresses_delete_by_id", value: deletedRow.id }
+}
+
+// soft delete functions
+export function removeQuest(id: Quest["id"]) {
+  return updateQuest(id, { status: "removed" })
+}
+
+export function removeNote(id: Note["id"]) {
+  return updateNote(id, { removedAt: new Date() })
+}
+
+export function removeProgress(id: Progress["id"]) {
+  return updateProgress(id, { removedAt: new Date() })
+}
+
+export function restoreQuest(id: Quest["id"]) {
+  return updateQuest(id, { status: "active" })
+}
+
+export function restoreNote(id: Note["id"]) {
+  return updateProgress(id, { removedAt: null })
+}
+
+export function restoreProgress(id: Progress["id"]) {
+  return updateProgress(id, { removedAt: null })
 }
