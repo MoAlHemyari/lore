@@ -146,7 +146,9 @@ export const quests = table(
 export const notes = table(
   "notes",
   (t) => ({
-    questId: t.text("quest_id").references(() => quests.id),
+    questId: t.text("quest_id").references(() => quests.id, {
+      onDelete: "cascade"
+    }),
     text: t.text().notNull(),
 
     ...baseSchemaColumns(t)
@@ -159,7 +161,9 @@ export const progress = table(
   (t) => ({
     questId: t
       .text("quest_id")
-      .references(() => quests.id)
+      .references(() => quests.id, {
+        onDelete: "cascade"
+      })
       .notNull(),
     text: t.text().notNull(),
 

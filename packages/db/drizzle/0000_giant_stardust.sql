@@ -5,7 +5,7 @@ CREATE TABLE `notes` (
 	`removed_at` text,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "check_removed_at_format" CHECK("notes"."removed_at" IS NULL OR datetime("notes"."removed_at") IS NOT NULL),
 	CONSTRAINT "check_removed_at_after_created" CHECK("notes"."removed_at" IS NULL OR "notes"."removed_at" >= "notes"."created_at")
 );
@@ -17,7 +17,7 @@ CREATE TABLE `progress` (
 	`removed_at` text,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`quest_id`) REFERENCES `quests`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "check_removed_at_format" CHECK("progress"."removed_at" IS NULL OR datetime("progress"."removed_at") IS NOT NULL),
 	CONSTRAINT "check_removed_at_after_created" CHECK("progress"."removed_at" IS NULL OR "progress"."removed_at" >= "progress"."created_at")
 );
