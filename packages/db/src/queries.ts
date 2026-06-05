@@ -1,4 +1,7 @@
-import { asc, desc, eq, type RequireAtLeastOne } from "drizzle-orm"
+import type { Database } from "bun:sqlite"
+import { asc, desc, eq, type ExtractTablesWithRelations, type RequireAtLeastOne } from "drizzle-orm"
+import type { SQLiteTransaction } from "drizzle-orm/sqlite-core"
+import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite"
 import { type Note, type Progress, type Quest } from "@lore/core"
 import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
 import { db } from "./db"
@@ -12,6 +15,7 @@ const operations = [
   "quest_get_by_id",
   "quest_insert",
   "quest_update",
+  "quest_remove_cascade",
   "quest_delete_all",
   "quest_delete_by_id",
 
@@ -256,6 +260,12 @@ export function insertProgress(progress: CreateProgress): OperationResult<Progre
   return { ok: true, operation: "progresses_insert", value: result.value }
 }
 
+type Executer =
+  | (BunSQLiteDatabase<Record<string, never>> & {
+      $client: Database
+    })
+  | SQLiteTransaction<"sync", void, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>>
+
 export type UpdateQuestValues = RequireAtLeastOne<Pick<Quest, "kind" | "title" | "description" | "status">>
 export function updateQuest(id: Quest["id"], values: UpdateQuestValues): OperationResult<Quest> {
   if (Object.values(values).length === 0)
@@ -276,6 +286,69 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
     if (values.status === "removed") normalizedValues.removedAt = t
   }
 
+  if (values.status === "removed") {
+    // cascade
+    let txError: null | DBError = null
+    db.transaction((tx) => {
+      const qQuest = safeQuery(() =>
+        tx.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
+      )
+      if (!qQuest.ok) {
+        txError = qQuest.error
+        return tx.rollback()
+      }
+
+      const insertedQuestRow = qQuest.value
+      if (!insertedQuestRow) {
+        txError = { code: "FAILED_TO_UPDATE" }
+        return tx.rollback()
+      }
+
+      const qNotes = safeQuery(() =>
+        tx
+          .update(notesTable)
+          .set({ removedAt: normalizedValues.removedAt })
+          .where(eq(notesTable.questId, id))
+          .returning()
+          .all()
+      )
+
+      if (!qNotes.ok) {
+        txError = qNotes.error
+        return tx.rollback()
+      }
+
+      const insertedNoteRows = qNotes.value
+      if (!insertedNoteRows) {
+        txError = { code: "FAILED_TO_UPDATE" }
+        return tx.rollback()
+      }
+
+      const qProgress = safeQuery(() =>
+        tx
+          .update(progressTable)
+          .set({ removedAt: normalizedValues.removedAt })
+          .where(eq(progressTable.questId, id))
+          .returning()
+          .all()
+      )
+
+      if (!qProgress.ok) {
+        txError = qProgress.error
+        return tx.rollback()
+      }
+
+      const insertedProgressRows = qProgress.value
+      if (!insertedProgressRows) {
+        txError = { code: "FAILED_TO_UPDATE" }
+        return tx.rollback()
+      }
+    })
+
+    if (txError) return { ok: false, operation: "quest_remove_cascade", error: txError }
+  }
+  // TODO: restore cascade
+
   const q = safeQuery(() =>
     db.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
   )
@@ -291,7 +364,11 @@ export function updateQuest(id: Quest["id"], values: UpdateQuestValues): Operati
 }
 
 export type UpdateNoteValues = RequireAtLeastOne<Note, "text" | "removedAt">
-export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationResult<Note> {
+export function updateNote(
+  executer: Executer = db,
+  id: Note["id"],
+  values: UpdateNoteValues
+): OperationResult<Note> {
   if (Object.values(values).length === 0)
     return { ok: false, operation: "notes_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
@@ -301,7 +378,7 @@ export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationR
   if (values.removedAt === null) normalizedValues.removedAt = null
 
   const q = safeQuery(() =>
-    db.update(notesTable).set(normalizedValues).where(eq(notesTable.id, id)).returning().get()
+    executer.update(notesTable).set(normalizedValues).where(eq(notesTable.id, id)).returning().get()
   )
   if (!q.ok) return { ok: false, operation: "notes_update", error: q.error }
 
@@ -315,7 +392,11 @@ export function updateNote(id: Note["id"], values: UpdateNoteValues): OperationR
 }
 
 export type UpdateProgressValues = RequireAtLeastOne<Pick<Progress, "text" | "removedAt">>
-export function updateProgress(id: Progress["id"], values: UpdateProgressValues): OperationResult<Progress> {
+export function updateProgress(
+  executer: Executer = db,
+  id: Progress["id"],
+  values: UpdateProgressValues
+): OperationResult<Progress> {
   if (Object.values(values).length === 0)
     return { ok: false, operation: "progresses_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
@@ -325,7 +406,7 @@ export function updateProgress(id: Progress["id"], values: UpdateProgressValues)
   if (values.removedAt === null) normalizedValues.removedAt = null
 
   const q = safeQuery(() =>
-    db.update(progressTable).set(normalizedValues).where(eq(progressTable.id, id)).returning().get()
+    executer.update(progressTable).set(normalizedValues).where(eq(progressTable.id, id)).returning().get()
   )
   if (!q.ok) return { ok: false, operation: "progresses_update", error: q.error }
 
@@ -411,11 +492,11 @@ export function removeQuest(id: Quest["id"]) {
 }
 
 export function removeNote(id: Note["id"]) {
-  return updateNote(id, { removedAt: new Date() })
+  return updateNote(db, id, { removedAt: new Date() })
 }
 
 export function removeProgress(id: Progress["id"]) {
-  return updateProgress(id, { removedAt: new Date() })
+  return updateProgress(db, id, { removedAt: new Date() })
 }
 
 export function restoreQuest(id: Quest["id"]) {
@@ -423,9 +504,9 @@ export function restoreQuest(id: Quest["id"]) {
 }
 
 export function restoreNote(id: Note["id"]) {
-  return updateNote(id, { removedAt: null })
+  return updateNote(db, id, { removedAt: null })
 }
 
 export function restoreProgress(id: Progress["id"]) {
-  return updateProgress(id, { removedAt: null })
+  return updateProgress(db, id, { removedAt: null })
 }

@@ -1,11 +1,13 @@
-import { beforeAll, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { DRIZZLE_OUT } from "./constants"
 import {
   deleteNoteById,
   deleteProgressById,
   deleteQuestById,
+  getNoteById,
   getNotes,
+  getProgressById,
   getProgresses,
   getQuestById,
   getQuests,
@@ -116,6 +118,7 @@ describe("lifecycles", () => {
       expect(result.value.status).toBe("abandoned")
       expect(result.value.abandonedAt).toBeValidDate()
     })
+
     test("complete", () => {
       const result = updateQuest(questId, { status: "completed" })
 
@@ -124,6 +127,7 @@ describe("lifecycles", () => {
       expect(result.value.status).toBe("completed")
       expect(result.value.completedAt).toBeValidDate()
     })
+
     test("remove", () => {
       const result = removeQuest(questId)
 
@@ -132,6 +136,7 @@ describe("lifecycles", () => {
       expect(result.value.status).toBe("removed")
       expect(result.value.removedAt).toBeValidDate()
     })
+
     test("reactivate/restore", () => {
       const result = restoreQuest(questId)
 
@@ -139,6 +144,7 @@ describe("lifecycles", () => {
 
       expect(result.value.status).toBe("active")
     })
+
     test("delete", () => {
       const result = deleteQuestById(questId)
 
@@ -209,7 +215,7 @@ describe("lifecycles", () => {
     })
 
     test("update", () => {
-      const result = updateNote(noteId, {
+      const result = updateNote(db, noteId, {
         text: "updated note title"
       })
 
@@ -311,7 +317,7 @@ describe("lifecycles", () => {
     })
 
     test("update", () => {
-      const result = updateProgress(progressId, {
+      const result = updateProgress(db, progressId, {
         text: "updated progress"
       })
 
@@ -377,6 +383,161 @@ describe("lifecycles", () => {
       if (!result.ok) throw new Error(result.error.code)
 
       expect(result.value).toBeArray()
+    })
+  })
+
+  describe("complex", () => {
+    let quest1: any,
+      quest2: any,
+      note1: any,
+      note2: any,
+      note3: any,
+      note4: any,
+      progress1: any,
+      progress2: any,
+      progress3: any,
+      progress4: any
+
+    beforeEach(() => {
+      quest1 = insertQuest({
+        title: "quest",
+        description: "",
+        kind: "main",
+        status: "active"
+      })
+      if (!quest1.ok) throw new Error(quest1.error.code)
+
+      quest2 = insertQuest({
+        title: "quest",
+        description: "",
+        kind: "main",
+        status: "active"
+      })
+      if (!quest2.ok) throw new Error(quest2.error.code)
+
+      note1 = insertNote({ text: "note 1", questId: quest1.value.id })
+      if (!note1.ok) throw new Error(note1.error.code)
+
+      note2 = insertNote({ text: "note 2" })
+      if (!note2.ok) throw new Error(note2.error.code)
+
+      note3 = insertNote({ text: "note 3", questId: quest2.value.id })
+      if (!note3.ok) throw new Error(note3.error.code)
+
+      note4 = insertNote({ text: "note 4" })
+      if (!note4.ok) throw new Error(note4.error.code)
+
+      progress1 = insertProgress({ text: "progress 1", questId: quest1.value.id })
+      if (!progress1.ok) throw new Error(progress1.error.code)
+
+      progress2 = insertProgress({ text: "progress 2", questId: quest2.value.id })
+      if (!progress2.ok) throw new Error(progress2.error.code)
+
+      progress3 = insertProgress({ text: "progress 3", questId: quest2.value.id })
+      if (!progress3.ok) throw new Error(progress3.error.code)
+
+      progress4 = insertProgress({ text: "progress 4", questId: quest1.value.id })
+      if (!progress4.ok) throw new Error(progress4.error.code)
+
+      const removedQuest = removeQuest(quest1.value.id)
+      if (!removedQuest.ok) throw new Error(removedQuest.error.code)
+
+      expect(removedQuest.value.status).toBe("removed")
+      expect(removedQuest.value.removedAt).toBeValidDate()
+    })
+
+    test("cascade quest remove", () => {
+      const note1_1 = getNoteById(note1.value.id)
+      console.log(note1_1)
+      if (!note1_1.ok) throw new Error(note1_1.error.code)
+      if (!note1_1.value) throw new Error("Couldn't be found")
+
+      const note2_1 = getNoteById(note2.value.id)
+      if (!note2_1.ok) throw new Error(note2_1.error.code)
+      if (!note2_1.value) throw new Error("Couldn't be found")
+
+      const note3_1 = getNoteById(note3.value.id)
+      if (!note3_1.ok) throw new Error(note3_1.error.code)
+      if (!note3_1.value) throw new Error("Couldn't be found")
+
+      const note4_1 = getNoteById(note4.value.id)
+      if (!note4_1.ok) throw new Error(note4_1.error.code)
+      if (!note4_1.value) throw new Error("Couldn't be found")
+
+      const progress1_1 = getProgressById(progress1.value.id)
+      if (!progress1_1.ok) throw new Error(progress1_1.error.code)
+      if (!progress1_1.value) throw new Error("Couldn't be found")
+
+      const progress2_1 = getProgressById(progress2.value.id)
+      if (!progress2_1.ok) throw new Error(progress2_1.error.code)
+      if (!progress2_1.value) throw new Error("Couldn't be found")
+
+      const progress3_1 = getProgressById(progress3.value.id)
+      if (!progress3_1.ok) throw new Error(progress3_1.error.code)
+      if (!progress3_1.value) throw new Error("Couldn't be found")
+
+      const progress4_1 = getProgressById(progress4.value.id)
+      if (!progress4_1.ok) throw new Error(progress4_1.error.code)
+      if (!progress4_1.value) throw new Error("Couldn't be found")
+
+      expect(note1_1.value.removedAt).toBeValidDate()
+      expect(note2_1.value.removedAt).toBeNull()
+      expect(note3_1.value.removedAt).toBeNull()
+      expect(note4_1.value.removedAt).toBeNull()
+
+      expect(progress1_1.value.removedAt).toBeValidDate()
+      expect(progress2_1.value.removedAt).toBeNull()
+      expect(progress3_1.value.removedAt).toBeNull()
+      expect(progress4_1.value.removedAt).toBeValidDate()
+    })
+
+    test("cascade quest restore", () => {
+      const restoredQuest = restoreQuest(quest1.value.id)
+      if (!restoredQuest.ok) throw new Error(restoredQuest.error.code)
+
+      expect(restoredQuest.value.status).toBe("active")
+
+      const note1_1 = getNoteById(note1.value.id)
+      if (!note1_1.ok) throw new Error(note1_1.error.code)
+      if (!note1_1.value) throw new Error("Couldn't be found")
+
+      const note2_1 = getNoteById(note2.value.id)
+      if (!note2_1.ok) throw new Error(note2_1.error.code)
+      if (!note2_1.value) throw new Error("Couldn't be found")
+
+      const note3_1 = getNoteById(note3.value.id)
+      if (!note3_1.ok) throw new Error(note3_1.error.code)
+      if (!note3_1.value) throw new Error("Couldn't be found")
+
+      const note4_1 = getNoteById(note4.value.id)
+      if (!note4_1.ok) throw new Error(note4_1.error.code)
+      if (!note4_1.value) throw new Error("Couldn't be found")
+
+      const progress1_1 = getProgressById(progress1.value.id)
+      if (!progress1_1.ok) throw new Error(progress1_1.error.code)
+      if (!progress1_1.value) throw new Error("Couldn't be found")
+
+      const progress2_1 = getProgressById(progress2.value.id)
+      if (!progress2_1.ok) throw new Error(progress2_1.error.code)
+      if (!progress2_1.value) throw new Error("Couldn't be found")
+
+      const progress3_1 = getProgressById(progress3.value.id)
+      if (!progress3_1.ok) throw new Error(progress3_1.error.code)
+      if (!progress3_1.value) throw new Error("Couldn't be found")
+
+      const progress4_1 = getProgressById(progress4.value.id)
+      if (!progress4_1.ok) throw new Error(progress4_1.error.code)
+      if (!progress4_1.value) throw new Error("Couldn't be found")
+
+      expect(note1_1.value.removedAt).toBeNull()
+      expect(note2_1.value.removedAt).toBeNull()
+      expect(note3_1.value.removedAt).toBeNull()
+      expect(note4_1.value.removedAt).toBeNull()
+
+      expect(progress1_1.value.removedAt).toBeNull()
+      expect(progress2_1.value.removedAt).toBeNull()
+      expect(progress3_1.value.removedAt).toBeNull()
+      expect(progress4_1.value.removedAt).toBeNull()
     })
   })
 })
