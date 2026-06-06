@@ -1,3 +1,17 @@
+CREATE TABLE `journeys` (
+	`title` text NOT NULL,
+	`description` text DEFAULT '' NOT NULL,
+	`archived_at` text,
+	`id` text PRIMARY KEY NOT NULL,
+	`removed_at` text,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	CONSTRAINT "check_removed_at_format" CHECK("journeys"."removed_at" IS NULL OR datetime("journeys"."removed_at") IS NOT NULL),
+	CONSTRAINT "check_removed_at_after_created" CHECK("journeys"."removed_at" IS NULL OR "journeys"."removed_at" >= "journeys"."created_at"),
+	CONSTRAINT "check_archived_at_format" CHECK("journeys"."archived_at" IS NULL OR datetime("journeys"."archived_at") IS NOT NULL),
+	CONSTRAINT "check_archived_at_after_created" CHECK("journeys"."archived_at" IS NULL OR "journeys"."archived_at" >= "journeys"."created_at")
+);
+--> statement-breakpoint
 CREATE TABLE `notes` (
 	`quest_id` text,
 	`text` text NOT NULL,

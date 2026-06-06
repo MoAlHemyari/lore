@@ -62,6 +62,33 @@ const baseSchemaCheckConstraints = <
   )
 ]
 
+export const journeys = table(
+  "journeys",
+  (t) => ({
+    title: t.text("title").notNull(),
+    description: t.text("description").notNull().default(""),
+
+    archivedAt: t.text("archived_at"),
+
+    ...baseSchemaColumns(t)
+  }),
+  (table) => [
+    ...baseSchemaCheckConstraints(table),
+
+    // check if timestamps have right format
+    check(
+      "check_archived_at_format",
+      sql`${table.archivedAt} IS NULL OR datetime(${table.archivedAt}) IS NOT NULL`
+    ),
+
+    // check if timestamps are after the created at timestamp
+    check(
+      "check_archived_at_after_created",
+      sql`${table.archivedAt} IS NULL OR ${table.archivedAt} >= ${table.createdAt}`
+    )
+  ]
+)
+
 export const quests = table(
   "quests",
   (t) => ({

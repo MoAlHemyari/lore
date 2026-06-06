@@ -1,6 +1,11 @@
 import type { InferSelectModel } from "drizzle-orm"
-import type { Note, Progress, Quest } from "@lore/core"
-import { notes as notesTable, progress as progressTable, quests as questsTable } from "./schema"
+import type { Journey, Note, Progress, Quest } from "@lore/core"
+import {
+  journeys as journeysTable,
+  quests as questsTable,
+  notes as notesTable,
+  progress as progressTable
+} from "./schema"
 import type { ErrorCode } from "./errors"
 
 type ParseResult<T> =
@@ -12,6 +17,28 @@ type ParseResult<T> =
       ok: false
       error: ErrorCode
     }
+
+type JourneyRow = InferSelectModel<typeof journeysTable>
+export function mapJourneyDBToDomain(row: JourneyRow): ParseResult<Journey> {
+  const journey: Journey = {
+    ...row,
+    archivedAt: row.archivedAt ? new Date(row.archivedAt) : null,
+    removedAt: row.removedAt ? new Date(row.removedAt) : null,
+    updatedAt: new Date(row.updatedAt),
+    createdAt: new Date(row.createdAt)
+  }
+
+  if (Number.isNaN(journey.createdAt.getTime()))
+    return { ok: false, error: "FAILED_TO_PARSE_TO_DOMAIN_SHAPE" }
+  if (Number.isNaN(journey.updatedAt.getTime()))
+    return { ok: false, error: "FAILED_TO_PARSE_TO_DOMAIN_SHAPE" }
+  if (journey.removedAt && Number.isNaN(journey.removedAt.getTime()))
+    return { ok: false, error: "FAILED_TO_PARSE_TO_DOMAIN_SHAPE" }
+  if (journey.archivedAt && Number.isNaN(journey.archivedAt.getTime()))
+    return { ok: false, error: "FAILED_TO_PARSE_TO_DOMAIN_SHAPE" }
+
+  return { ok: true, value: journey }
+}
 
 type QuestRow = InferSelectModel<typeof questsTable>
 export function mapQuestDBToDomain(row: QuestRow): ParseResult<Quest> {

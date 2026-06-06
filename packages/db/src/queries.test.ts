@@ -2,33 +2,42 @@ import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { DRIZZLE_OUT } from "./constants"
 import {
+  deleteJourneyById,
   deleteNoteById,
   deleteProgressById,
   deleteQuestById,
+  getjourneyById,
+  getJourneys,
   getNoteById,
   getNotes,
   getProgressById,
   getProgresses,
   getQuestById,
   getQuests,
+  insertJourney,
   insertNote,
   insertProgress,
   insertQuest,
+  removeJourney,
   removeNote,
   removeProgress,
   removeQuest,
+  restoreJourney,
   restoreNote,
   restoreProgress,
   restoreQuest,
+  unarchiveJourney,
+  updateJourney,
   updateNote,
   updateProgress,
   updateQuest,
+  wipeAllJourneysTableRows,
   wipeAllNotesTableRows,
   wipeAllProgressTableRows,
   wipeAllQuestsTableRows
 } from "./queries"
 import { db } from "./db"
-import type { Note, Progress, Quest } from "@lore/core"
+import type { Journey, Note, Progress, Quest } from "@lore/core"
 
 describe("lifecycles", () => {
   beforeAll(() => {
@@ -36,6 +45,147 @@ describe("lifecycles", () => {
     db.$client.run("PRAGMA foreign_keys = ON")
   })
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+  describe("journeys", () => {
+    let journeyId: Journey["id"]
+
+    test("insert", () => {
+      const result = insertJourney({
+        title: "first journey",
+        description: ""
+      })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.title).toBe("first journey")
+      expect(result.value.description).toBe("")
+      expect(result.value.archivedAt).toBeNull()
+      expect(result.value.removedAt).toBeNull()
+      expect(result.value.updatedAt).toBeValidDate()
+      expect(result.value.createdAt).toBeValidDate()
+
+      // assign to the higher lvl var to be used in other tests
+      journeyId = result.value.id
+    })
+
+    test("get all", () => {
+      const result = getJourneys()
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value).toBeArray()
+
+      if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
+      else console.log("There are no journeys in the table.")
+    })
+
+    test("get searched for journeys", () => {
+      insertJourney({
+        title: "learning something new",
+        description: "matched journey"
+      })
+
+      insertJourney({
+        title: "some project",
+        description: "should not match"
+      })
+
+      const result = getJourneys({ search: "learning" })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
+      else console.log("There are no journeys in the table.")
+
+      expect(result.value.length).toBe(1)
+      expect(result.value[0]!.title).toContain("learning")
+    })
+
+    test("get by id", () => {
+      const result = getjourneyById(journeyId)
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value).not.toBeNull()
+      expect(uuidPattern.test(result.value!.id)).toBeTrue()
+      expect(result.value!.title).toBeString()
+    })
+
+    test("update", () => {
+      const result = updateJourney(journeyId, {
+        title: "New updated title",
+        description: "New added description"
+      })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.title).toBe("New updated title")
+      expect(result.value.description).toBe("New added description")
+    })
+
+    test("archive", () => {
+      const result = updateJourney(journeyId, { archivedAt: new Date() })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.archivedAt).toBeValidDate()
+    })
+
+    test("archive", () => {
+      const result = unarchiveJourney(journeyId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.archivedAt).toBeNull()
+    })
+
+    test("remove", () => {
+      const result = removeJourney(journeyId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeValidDate()
+    })
+
+    test("restore", () => {
+      const result = restoreJourney(journeyId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value.removedAt).toBeNull()
+    })
+
+    test("delete", () => {
+      const result = deleteJourneyById(journeyId)
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value).toBe(journeyId)
+    })
+
+    test("delete all", () => {
+      // insert mutliple journeys before delete them all
+      insertJourney({
+        title: "second journey",
+        description: ""
+      })
+
+      insertJourney({
+        title: "third journey",
+        description: ""
+      })
+
+      insertJourney({
+        title: "forth journey",
+        description: ""
+      })
+
+      const result = wipeAllJourneysTableRows()
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      expect(result.value).toBeArray()
+    })
+  })
 
   describe("quest", () => {
     let questId: Quest["id"]
@@ -179,6 +329,7 @@ describe("lifecycles", () => {
 
       expect(result.value).toBe(questId)
     })
+
     test("delete all", () => {
       // insert mutliple quests before delete them all
       insertQuest({

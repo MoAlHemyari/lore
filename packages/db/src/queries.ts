@@ -2,14 +2,28 @@ import type { Database } from "bun:sqlite"
 import { asc, desc, eq, or, like, type ExtractTablesWithRelations, type RequireAtLeastOne } from "drizzle-orm"
 import type { SQLiteTransaction } from "drizzle-orm/sqlite-core"
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite"
-import { type Note, type Progress, type Quest } from "@lore/core"
-import { quests as questsTable, notes as notesTable, progress as progressTable } from "./schema"
+import { type Journey, type Note, type Progress, type Quest } from "@lore/core"
+import {
+  journeys as journeysTable,
+  quests as questsTable,
+  notes as notesTable,
+  progress as progressTable
+} from "./schema"
 import { db } from "./db"
 import type { DBError } from "./errors"
-import { mapNoteDBToDomain, mapProgressDBToDomain, mapQuestDBToDomain } from "./parsers"
+import { mapJourneyDBToDomain, mapQuestDBToDomain, mapNoteDBToDomain, mapProgressDBToDomain } from "./parsers"
 import { safeQuery } from "./helpers"
 
 const operations = [
+  // journey operations
+  "journeys_get_all",
+  "journeys_get_by_id",
+  "journeys_insert",
+  "journeys_update",
+  "journeys_remove_cascade",
+  "journeys_delete_all",
+  "journeys_delete_by_id",
+
   // quest operations
   "quests_get_all",
   "quests_get_by_id",
@@ -52,6 +66,63 @@ type OperationResult<T> =
 const DEFAULT_PAGE_SIZE = 10
 
 type GenericOrderByFields = "createdAt" | "updatedAt"
+
+type JourneysOrderByFields = GenericOrderByFields | "archivedAt"
+export function getJourneys(
+  parameters: {
+    search?: string
+    page?: number
+    pageSize?: number
+    order?: {
+      sort: "asc" | "desc"
+      field: JourneysOrderByFields
+    }
+  } = {}
+): OperationResult<Journey[]> {
+  const {
+    search = "",
+    page = 0,
+    pageSize = DEFAULT_PAGE_SIZE,
+    order = {
+      sort: "desc",
+      field: "createdAt"
+    }
+  } = parameters
+
+  let q
+  const baseQuery = db
+    .select()
+    .from(journeysTable)
+    .orderBy(order.sort === "asc" ? asc(journeysTable[order.field]) : desc(journeysTable[order.field]))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  if (parameters.search) {
+    q = safeQuery(() =>
+      baseQuery
+        .where(or(like(journeysTable.title, `%${search}%`), like(journeysTable.description, `%${search}`)))
+        .all()
+    )
+  } else q = safeQuery(() => baseQuery.all())
+
+  if (!q.ok) return { ok: false, operation: "journeys_get_all", error: q.error }
+
+  const selectedRows = q.value
+
+  const journeys: Journey[] = []
+  for (const row of selectedRows) {
+    const m = mapJourneyDBToDomain(row)
+    if (!m.ok) return { ok: false, operation: "journeys_get_all", error: { code: m.error } }
+
+    journeys.push(m.value)
+  }
+
+  return {
+    ok: true,
+    operation: "journeys_get_all",
+    value: journeys
+  }
+}
 
 type QuestOrderByFields = GenericOrderByFields | "kind" | "status"
 export function getQuests(
@@ -214,6 +285,19 @@ export function getProgresses(
   }
 }
 
+export function getjourneyById(id: Journey["id"]): OperationResult<Journey | null> {
+  const q = safeQuery(() => db.select().from(journeysTable).where(eq(journeysTable.id, id)).get())
+  if (!q.ok) return { ok: false, operation: "journeys_get_by_id", error: q.error }
+
+  const selectedRow = q.value
+  if (!selectedRow) return { ok: true, operation: "journeys_get_by_id", value: null }
+
+  const m = mapJourneyDBToDomain(selectedRow)
+  if (!m.ok) return { ok: false, operation: "journeys_get_by_id", error: { code: m.error } }
+
+  return { ok: true, operation: "journeys_get_by_id", value: m.value }
+}
+
 export function getQuestById(id: Quest["id"]): OperationResult<Quest | null> {
   const q = safeQuery(() => db.select().from(questsTable).where(eq(questsTable.id, id)).get())
   if (!q.ok) return { ok: false, operation: "quests_get_by_id", error: q.error }
@@ -254,6 +338,23 @@ export function getProgressById(id: Progress["id"]): OperationResult<Progress | 
 }
 
 // mutations
+export type CreateJourneyValues = {
+  title: Journey["title"]
+  description: Journey["description"]
+}
+export function insertJourney(values: CreateJourneyValues): OperationResult<Journey> {
+  const q = safeQuery(() => db.insert(journeysTable).values(values).returning().get())
+  if (!q.ok) return { ok: false, operation: "journeys_insert", error: q.error }
+
+  const insertedRow = q.value
+  if (!insertedRow) return { ok: false, operation: "journeys_insert", error: { code: "FAILED_TO_INSERT" } }
+
+  const m = mapJourneyDBToDomain(insertedRow)
+  if (!m.ok) return { ok: false, operation: "journeys_insert", error: { code: m.error } }
+
+  return { ok: true, operation: "journeys_insert", value: m.value }
+}
+
 export type CreateQuestValues = {
   title: Quest["title"]
   kind: Quest["kind"]
@@ -301,6 +402,35 @@ export function insertProgress(progress: CreateProgress): OperationResult<Progre
   return { ok: true, operation: "progresses_insert", value: m.value }
 }
 
+export type UpdateJourneyValues = RequireAtLeastOne<
+  Pick<Journey, "title" | "description" | "archivedAt" | "removedAt">
+>
+export function updateJourney(id: Journey["id"], values: UpdateJourneyValues): OperationResult<Journey> {
+  if (Object.values(values).length === 0)
+    return { ok: false, operation: "journeys_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
+
+  const normalizedValues: Partial<typeof journeysTable.$inferInsert> = {}
+  if (values.title) normalizedValues.title = values.title
+  if ("description" in values) normalizedValues.description = values.description
+  if (values.archivedAt) normalizedValues.archivedAt = values.archivedAt.toISOString()
+  if (values.archivedAt === null) normalizedValues.archivedAt = values.archivedAt = null
+  if (values.removedAt) normalizedValues.removedAt = values.removedAt.toISOString()
+  if (values.removedAt === null) normalizedValues.removedAt = values.removedAt = null
+
+  const q = safeQuery(() =>
+    db.update(journeysTable).set(normalizedValues).where(eq(journeysTable.id, id)).returning().get()
+  )
+  if (!q.ok) return { ok: false, operation: "journeys_update", error: q.error }
+
+  const updatedRow = q.value
+  if (!updatedRow) return { ok: false, operation: "journeys_update", error: { code: "FAILED_TO_UPDATE" } }
+
+  const m = mapJourneyDBToDomain(updatedRow)
+  if (!m.ok) return { ok: false, operation: "journeys_update", error: { code: m.error } }
+
+  return { ok: true, operation: "journeys_update", value: m.value }
+}
+
 export type UpdateQuestValues = RequireAtLeastOne<Pick<Quest, "kind" | "title" | "description" | "status">>
 export function updateQuest(
   id: Quest["id"],
@@ -313,7 +443,7 @@ export function updateQuest(
   const normalizedValues: Partial<typeof questsTable.$inferInsert> = {}
   if (values.kind) normalizedValues.kind = values.kind
   if (values.title) normalizedValues.title = values.title
-  if (values.description) normalizedValues.description = values.description
+  if ("description" in values) normalizedValues.description = values.description
   if (mode === "restore" && !("status" in values)) normalizedValues.status = "active"
   if (values.status) {
     normalizedValues.status = values.status
@@ -443,6 +573,16 @@ export function updateProgress(
   return { ok: true, operation: "progresses_update", value: m.value }
 }
 
+export function wipeAllJourneysTableRows(): OperationResult<Journey["id"][]> {
+  const q = safeQuery(() => db.delete(journeysTable).returning({ id: journeysTable.id }).all())
+  if (!q.ok) return { ok: false, operation: "journeys_delete_all", error: q.error }
+
+  const deletedRowIDs = q.value
+  const flattenedArray = deletedRowIDs.map((obj) => obj.id)
+
+  return { ok: true, operation: "journeys_delete_all", value: flattenedArray }
+}
+
 export function wipeAllQuestsTableRows(): OperationResult<Quest["id"][]> {
   const q = safeQuery(() => db.delete(questsTable).returning({ id: questsTable.id }).all())
   if (!q.ok) return { ok: false, operation: "quests_delete_all", error: q.error }
@@ -471,6 +611,19 @@ export function wipeAllProgressTableRows(): OperationResult<Progress["id"][]> {
   const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
   return { ok: true, operation: "progresses_delete_all", value: flattenedArray }
+}
+
+export function deleteJourneyById(id: Journey["id"]): OperationResult<Journey["id"]> {
+  const q = safeQuery(() =>
+    db.delete(journeysTable).where(eq(journeysTable.id, id)).returning({ id: journeysTable.id }).get()
+  )
+  if (!q.ok) return { ok: false, operation: "journeys_delete_by_id", error: q.error }
+
+  const deletedRow = q.value
+  if (!deletedRow)
+    return { ok: false, operation: "journeys_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
+
+  return { ok: true, operation: "journeys_delete_by_id", value: deletedRow.id }
 }
 
 export function deleteQuestById(id: Quest["id"]): OperationResult<Quest["id"]> {
@@ -511,6 +664,10 @@ export function deleteProgressById(id: Progress["id"]): OperationResult<Progress
 }
 
 // soft delete functions
+export function removeJourney(id: Journey["id"]) {
+  return updateJourney(id, { removedAt: new Date() })
+}
+
 export function removeQuest(id: Quest["id"]) {
   return updateQuest(id, { status: "removed" })
 }
@@ -523,6 +680,10 @@ export function removeProgress(id: Progress["id"]) {
   return updateProgress(db, id, { removedAt: new Date() })
 }
 
+export function restoreJourney(id: Journey["id"]) {
+  return updateJourney(id, { removedAt: null })
+}
+
 export function restoreQuest(id: Quest["id"]) {
   return updateQuest(id, { status: "active" }, "restore")
 }
@@ -533,4 +694,8 @@ export function restoreNote(id: Note["id"]) {
 
 export function restoreProgress(id: Progress["id"]) {
   return updateProgress(db, id, { removedAt: null })
+}
+
+export function unarchiveJourney(id: Journey["id"]) {
+  return updateJourney(id, { archivedAt: null })
 }

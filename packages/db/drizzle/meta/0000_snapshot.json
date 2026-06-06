@@ -1,9 +1,88 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "65e5d69f-c7a3-4aa6-880e-6afeb303294b",
+  "id": "5489feed-f785-4afa-8506-709b1d620d95",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "journeys": {
+      "name": "journeys",
+      "columns": {
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(CURRENT_TIMESTAMP)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "check_removed_at_format": {
+          "name": "check_removed_at_format",
+          "value": "\"journeys\".\"removed_at\" IS NULL OR datetime(\"journeys\".\"removed_at\") IS NOT NULL"
+        },
+        "check_removed_at_after_created": {
+          "name": "check_removed_at_after_created",
+          "value": "\"journeys\".\"removed_at\" IS NULL OR \"journeys\".\"removed_at\" >= \"journeys\".\"created_at\""
+        },
+        "check_archived_at_format": {
+          "name": "check_archived_at_format",
+          "value": "\"journeys\".\"archived_at\" IS NULL OR datetime(\"journeys\".\"archived_at\") IS NOT NULL"
+        },
+        "check_archived_at_after_created": {
+          "name": "check_archived_at_after_created",
+          "value": "\"journeys\".\"archived_at\" IS NULL OR \"journeys\".\"archived_at\" >= \"journeys\".\"created_at\""
+        }
+      }
+    },
     "notes": {
       "name": "notes",
       "columns": {
