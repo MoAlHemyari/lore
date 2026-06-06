@@ -4,7 +4,6 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@lore/core": "workspace:*",
-    "@lore/db": "workspace:*"
+    "@lore/core": "workspace:*"
   }
 }

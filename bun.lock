@@ -17,7 +17,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@lore/core": "workspace:*",
-        "@lore/db": "workspace:*",
       },
     },
     "packages/core": {
