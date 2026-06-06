@@ -14,6 +14,27 @@ import type { DBError } from "./errors"
 import { mapJourneyDBToDomain, mapQuestDBToDomain, mapNoteDBToDomain, mapProgressDBToDomain } from "./parsers"
 import { safeQuery } from "./helpers"
 
+//
+// queries are ordered on operation
+// _based queries_
+// 1. get all queries
+// 2. get by id queries
+// 3. insert queries
+// 4. update queries
+// 5. delete all queries
+// 6. delete by id queries
+// _derived queries_:
+// 7. remove queries
+// 8. restore queries
+// 9. unarchive queries
+//
+// Then, each of them ordered on the domains:
+// 1. journeys
+// 2. quests
+// 3. notes
+// 4. progresses
+//
+
 const operations = [
   // journey operations
   "journeys_get_all",
@@ -337,7 +358,6 @@ export function getProgressById(id: Progress["id"]): OperationResult<Progress | 
   return { ok: true, operation: "progresses_get_by_id", value: m.value }
 }
 
-// mutations
 export type CreateJourneyValues = {
   title: Journey["title"]
   description: Journey["description"]
@@ -527,7 +547,7 @@ export function updateNote(
     return { ok: false, operation: "notes_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
   const normalizedValues: Partial<Pick<typeof notesTable.$inferInsert, "text" | "removedAt">> = {}
-  if ("text" in values) normalizedValues.text = values.text // note: `if (values.text)` skips empty string
+  if ("text" in values) normalizedValues.text = values.text
   if (values.removedAt) normalizedValues.removedAt = values.removedAt.toISOString()
   if (values.removedAt === null) normalizedValues.removedAt = null
 
@@ -555,7 +575,7 @@ export function updateProgress(
     return { ok: false, operation: "progresses_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
   const normalizedValues: Partial<Pick<typeof progressTable.$inferInsert, "text" | "removedAt">> = {}
-  if ("text" in values) normalizedValues.text = values.text // note: `if (values.text)` skips empty string
+  if ("text" in values) normalizedValues.text = values.text
   if (values.removedAt) normalizedValues.removedAt = values.removedAt.toISOString()
   if (values.removedAt === null) normalizedValues.removedAt = null
 
@@ -663,7 +683,6 @@ export function deleteProgressById(id: Progress["id"]): OperationResult<Progress
   return { ok: true, operation: "progresses_delete_by_id", value: deletedRow.id }
 }
 
-// soft delete functions
 export function removeJourney(id: Journey["id"]) {
   return updateJourney(id, { removedAt: new Date() })
 }
