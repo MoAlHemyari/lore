@@ -9,5 +9,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "rebuild": "rm -rf dist && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@lore/db": "workspace:*"
   }
 }

@@ -22,6 +22,9 @@
     "packages/core": {
       "name": "@lore/core",
       "version": "0.0.1",
+      "dependencies": {
+        "@lore/db": "workspace:*",
+      },
     },
     "packages/db": {
       "name": "@lore/db",
