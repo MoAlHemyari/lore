@@ -12,12 +12,12 @@ import { safeQuery } from "./helpers"
 const operations = [
   // quest operations
   "quests_get_all",
-  "quest_get_by_id",
-  "quest_insert",
-  "quest_update",
-  "quest_remove_cascade",
-  "quest_delete_all",
-  "quest_delete_by_id",
+  "quests_get_by_id",
+  "quests_insert",
+  "quests_update",
+  "quests_remove_cascade",
+  "quests_delete_all",
+  "quests_delete_by_id",
 
   // notes operations
   "notes_get_all",
@@ -216,15 +216,15 @@ export function getProgresses(
 
 export function getQuestById(id: Quest["id"]): OperationResult<Quest | null> {
   const q = safeQuery(() => db.select().from(questsTable).where(eq(questsTable.id, id)).get())
-  if (!q.ok) return { ok: false, operation: "quest_get_by_id", error: q.error }
+  if (!q.ok) return { ok: false, operation: "quests_get_by_id", error: q.error }
 
   const selectedRow = q.value
-  if (!selectedRow) return { ok: true, operation: "quest_get_by_id", value: null }
+  if (!selectedRow) return { ok: true, operation: "quests_get_by_id", value: null }
 
   const m = mapQuestDBToDomain(selectedRow)
-  if (!m.ok) return { ok: false, operation: "quest_get_by_id", error: { code: m.error } }
+  if (!m.ok) return { ok: false, operation: "quests_get_by_id", error: { code: m.error } }
 
-  return { ok: true, operation: "quest_get_by_id", value: m.value }
+  return { ok: true, operation: "quests_get_by_id", value: m.value }
 }
 
 export function getNoteById(id: Note["id"]): OperationResult<Note | null> {
@@ -262,15 +262,15 @@ export type CreateQuestValues = {
 }
 export function insertQuest(values: CreateQuestValues): OperationResult<Quest> {
   const q = safeQuery(() => db.insert(questsTable).values(values).returning().get())
-  if (!q.ok) return { ok: false, operation: "quest_insert", error: q.error }
+  if (!q.ok) return { ok: false, operation: "quests_insert", error: q.error }
 
   const insertedRow = q.value
-  if (!insertedRow) return { ok: false, operation: "quest_insert", error: { code: "FAILED_TO_INSERT" } }
+  if (!insertedRow) return { ok: false, operation: "quests_insert", error: { code: "FAILED_TO_INSERT" } }
 
   const m = mapQuestDBToDomain(insertedRow)
-  if (!m.ok) return { ok: false, operation: "quest_insert", error: { code: m.error } }
+  if (!m.ok) return { ok: false, operation: "quests_insert", error: { code: m.error } }
 
-  return { ok: true, operation: "quest_insert", value: m.value }
+  return { ok: true, operation: "quests_insert", value: m.value }
 }
 
 export type CreateNoteValue = Pick<typeof notesTable.$inferInsert, "text" | "questId">
@@ -314,7 +314,7 @@ export function updateQuest(
   mode: "restore" | "default" = "default"
 ): OperationResult<Quest> {
   if (Object.values(values).length === 0)
-    return { ok: false, operation: "quest_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
+    return { ok: false, operation: "quests_update", error: { code: "NO_FIELDS_TO_UPDATE" } }
 
   const normalizedValues: Partial<typeof questsTable.$inferInsert> = {}
   if (values.kind) normalizedValues.kind = values.kind
@@ -375,16 +375,16 @@ export function updateQuest(
     const q = safeQuery(() =>
       db.update(questsTable).set(normalizedValues).where(eq(questsTable.id, id)).returning().get()
     )
-    if (!q.ok) return { ok: false, operation: "quest_update", error: q.error }
+    if (!q.ok) return { ok: false, operation: "quests_update", error: q.error }
 
     updatedRow = q.value
-    if (!updatedRow) return { ok: false, operation: "quest_update", error: { code: "FAILED_TO_UPDATE" } }
+    if (!updatedRow) return { ok: false, operation: "quests_update", error: { code: "FAILED_TO_UPDATE" } }
   }
 
   const m = mapQuestDBToDomain(updatedRow)
-  if (!m.ok) return { ok: false, operation: "quest_update", error: { code: m.error } }
+  if (!m.ok) return { ok: false, operation: "quests_update", error: { code: m.error } }
 
-  return { ok: true, operation: "quest_update", value: m.value }
+  return { ok: true, operation: "quests_update", value: m.value }
 }
 
 export type UpdateNoteValues = RequireAtLeastOne<Note, "text" | "removedAt">
@@ -445,12 +445,12 @@ export function updateProgress(
 
 export function wipeAllQuestsTableRows(): OperationResult<Quest["id"][]> {
   const q = safeQuery(() => db.delete(questsTable).returning({ id: questsTable.id }).all())
-  if (!q.ok) return { ok: false, operation: "quest_delete_all", error: q.error }
+  if (!q.ok) return { ok: false, operation: "quests_delete_all", error: q.error }
 
   const deletedRowIDs = q.value
   const flattenedArray = deletedRowIDs.map((obj) => obj.id)
 
-  return { ok: true, operation: "quest_delete_all", value: flattenedArray }
+  return { ok: true, operation: "quests_delete_all", value: flattenedArray }
 }
 
 export function wipeAllNotesTableRows(): OperationResult<Note["id"][]> {
@@ -477,12 +477,12 @@ export function deleteQuestById(id: Quest["id"]): OperationResult<Quest["id"]> {
   const q = safeQuery(() =>
     db.delete(questsTable).where(eq(questsTable.id, id)).returning({ id: questsTable.id }).get()
   )
-  if (!q.ok) return { ok: false, operation: "quest_delete_by_id", error: q.error }
+  if (!q.ok) return { ok: false, operation: "quests_delete_by_id", error: q.error }
 
   const deletedRow = q.value
-  if (!deletedRow) return { ok: false, operation: "quest_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
+  if (!deletedRow) return { ok: false, operation: "quests_delete_by_id", error: { code: "FAILED_TO_DELETE" } }
 
-  return { ok: true, operation: "quest_delete_by_id", value: deletedRow.id }
+  return { ok: true, operation: "quests_delete_by_id", value: deletedRow.id }
 }
 
 export function deleteNoteById(id: Note["id"]): OperationResult<Note["id"]> {
