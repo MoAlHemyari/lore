@@ -301,12 +301,6 @@ export function insertProgress(progress: CreateProgress): OperationResult<Progre
   return { ok: true, operation: "progresses_insert", value: m.value }
 }
 
-type Executer =
-  | (BunSQLiteDatabase<Record<string, never>> & {
-      $client: Database
-    })
-  | SQLiteTransaction<"sync", void, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>>
-
 export type UpdateQuestValues = RequireAtLeastOne<Pick<Quest, "kind" | "title" | "description" | "status">>
 export function updateQuest(
   id: Quest["id"],
@@ -386,6 +380,12 @@ export function updateQuest(
 
   return { ok: true, operation: "quests_update", value: m.value }
 }
+
+type Executer =
+  | (BunSQLiteDatabase<Record<string, never>> & {
+      $client: Database
+    })
+  | SQLiteTransaction<"sync", void, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>>
 
 export type UpdateNoteValues = RequireAtLeastOne<Note, "text" | "removedAt">
 export function updateNote(
