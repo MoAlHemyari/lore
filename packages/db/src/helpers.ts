@@ -31,19 +31,20 @@ export function safeQuery<T>(operation: () => T): SafeQueryResult<T> {
   try {
     return { ok: true, value: operation() }
   } catch (error) {
+    if (process.env.NODE_ENV === "test") console.log(error)
     return {
       ok: false,
       error:
         error instanceof Error
           ? {
-              code: "DB_CONNECTION_ERROR",
+              code: "DB_OPERATION_ERROR",
               message: error.message,
               cause: error.cause,
               name: error.name,
               stack: error.stack
             }
           : {
-              code: "DB_CONNECTION_ERROR"
+              code: "DB_OPERATION_ERROR"
             }
     }
   }

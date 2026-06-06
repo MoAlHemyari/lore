@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite"
-import { asc, desc, eq, type ExtractTablesWithRelations, type RequireAtLeastOne } from "drizzle-orm"
+import { asc, desc, eq, or, like, type ExtractTablesWithRelations, type RequireAtLeastOne } from "drizzle-orm"
 import type { SQLiteTransaction } from "drizzle-orm/sqlite-core"
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite"
 import { type Note, type Progress, type Quest } from "@lore/core"
@@ -55,25 +55,42 @@ type GenericOrderByFields = "createdAt" | "updatedAt"
 
 type QuestOrderByFields = GenericOrderByFields | "kind" | "status"
 export function getQuests(
-  page: number = 0,
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  order: {
-    sort: "asc" | "desc"
-    field: QuestOrderByFields
-  } = {
-    sort: "desc",
-    field: "createdAt"
-  }
+  parameters: {
+    search?: string
+    page?: number
+    pageSize?: number
+    order?: {
+      sort: "asc" | "desc"
+      field: QuestOrderByFields
+    }
+  } = {}
 ): OperationResult<Quest[]> {
-  const q = safeQuery(() =>
-    db
-      .select()
-      .from(questsTable)
-      .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .all()
-  )
+  const {
+    search = "",
+    page = 0,
+    pageSize = DEFAULT_PAGE_SIZE,
+    order = {
+      sort: "desc",
+      field: "createdAt"
+    }
+  } = parameters
+
+  let q
+  const baseQuery = db
+    .select()
+    .from(questsTable)
+    .orderBy(order.sort === "asc" ? asc(questsTable[order.field]) : desc(questsTable[order.field]))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  if (parameters.search) {
+    q = safeQuery(() =>
+      baseQuery
+        .where(or(like(questsTable.title, `%${search}%`), like(questsTable.description, `%${search}`)))
+        .all()
+    )
+  } else q = safeQuery(() => baseQuery.all())
+
   if (!q.ok) return { ok: false, operation: "quests_get_all", error: q.error }
 
   const selectedRows = q.value
@@ -95,25 +112,37 @@ export function getQuests(
 
 type NotesOrderByFields = GenericOrderByFields | "questId"
 export function getNotes(
-  page: number = 0,
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  order: {
-    sort: "asc" | "desc"
-    field: NotesOrderByFields
-  } = {
-    sort: "desc",
-    field: "createdAt"
-  }
+  parameters: {
+    search?: string
+    page?: number
+    pageSize?: number
+    order?: {
+      sort: "asc" | "desc"
+      field: NotesOrderByFields
+    }
+  } = {}
 ): OperationResult<Note[]> {
-  const q = safeQuery(() =>
-    db
-      .select()
-      .from(notesTable)
-      .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .all()
-  )
+  const {
+    search = "",
+    page = 0,
+    pageSize = DEFAULT_PAGE_SIZE,
+    order = {
+      sort: "desc",
+      field: "createdAt"
+    }
+  } = parameters
+
+  let q
+  const baseQuery = db
+    .select()
+    .from(notesTable)
+    .orderBy(order.sort === "asc" ? asc(notesTable[order.field]) : desc(notesTable[order.field]))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  if (search) q = safeQuery(() => baseQuery.where(like(notesTable.text, `%${search}%`)).all())
+  else q = safeQuery(() => baseQuery.all())
+
   if (!q.ok) return { ok: false, operation: "notes_get_all", error: q.error }
 
   const selectedRows = q.value
@@ -135,25 +164,37 @@ export function getNotes(
 
 type ProgressOrderByFields = GenericOrderByFields | "questId"
 export function getProgresses(
-  page: number = 0,
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  order: {
-    sort: "asc" | "desc"
-    field: ProgressOrderByFields
-  } = {
-    sort: "desc",
-    field: "createdAt"
-  }
+  parameters: {
+    search?: string
+    page?: number
+    pageSize?: number
+    order?: {
+      sort: "asc" | "desc"
+      field: ProgressOrderByFields
+    }
+  } = {}
 ): OperationResult<Progress[]> {
-  const q = safeQuery(() =>
-    db
-      .select()
-      .from(progressTable)
-      .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .all()
-  )
+  const {
+    search = "",
+    page = 0,
+    pageSize = DEFAULT_PAGE_SIZE,
+    order = {
+      sort: "desc",
+      field: "createdAt"
+    }
+  } = parameters
+
+  let q
+  const baseQuery = db
+    .select()
+    .from(progressTable)
+    .orderBy(order.sort === "asc" ? asc(progressTable[order.field]) : desc(progressTable[order.field]))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  if (search) q = safeQuery(() => baseQuery.where(like(progressTable.text, `%${search}%`)).all())
+  else q = safeQuery(() => baseQuery.all())
+
   if (!q.ok) return { ok: false, operation: "progresses_get_all", error: q.error }
 
   const selectedRows = q.value

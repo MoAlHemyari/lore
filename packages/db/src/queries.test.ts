@@ -33,6 +33,7 @@ import type { Note, Progress, Quest } from "@lore/core"
 describe("lifecycles", () => {
   beforeAll(() => {
     migrate(db, { migrationsFolder: DRIZZLE_OUT })
+    db.$client.run("PRAGMA foreign_keys = ON")
   })
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -74,6 +75,32 @@ describe("lifecycles", () => {
 
       if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
       else console.log("There are no quests in the table.")
+    })
+
+    test("get searched for quests", () => {
+      insertQuest({
+        title: "note taking app",
+        description: "matched quest",
+        kind: "main",
+        status: "active"
+      })
+
+      insertQuest({
+        title: "random task",
+        description: "should not match",
+        kind: "main",
+        status: "active"
+      })
+
+      const result = getQuests({ search: "taking" })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
+      else console.log("There are no quests in the table.")
+
+      expect(result.value.length).toBe(1)
+      expect(result.value[0]!.title).toContain("taking")
     })
 
     test("get by id", () => {
@@ -186,17 +213,18 @@ describe("lifecycles", () => {
   describe("note", () => {
     let noteId: Note["id"]
     let noteQuestId: Quest["id"]
+    beforeEach(() => {
+      const quest = insertQuest({
+        title: "note quest",
+        description: "",
+        kind: "main",
+        status: "active"
+      })
 
-    const quest = insertQuest({
-      title: "note quest",
-      description: "",
-      kind: "main",
-      status: "active"
+      if (!quest.ok) throw new Error("Expected note quest insert to succeed")
+
+      noteQuestId = quest.value.id
     })
-
-    if (!quest.ok) throw new Error("Expected note quest insert to succeed")
-
-    noteQuestId = quest.value.id
 
     test("insert", () => {
       const result = insertNote({
@@ -215,19 +243,29 @@ describe("lifecycles", () => {
     })
 
     test("update", () => {
-      const result = updateNote(db, noteId, {
+      const noteQuery = insertNote({
+        text: "first note",
+        questId: noteQuestId
+      })
+      if (!noteQuery.ok) throw new Error(noteQuery.error.code)
+
+      const result = updateNote(db, noteQuery.value.id, {
         text: "updated note title"
       })
 
       if (!result.ok) throw new Error(result.error.code)
 
-      expect(result.value.id).toBe(noteId)
       expect(result.value.text).toBe("updated note title")
-      expect(result.value.questId).toBe(noteQuestId)
     })
 
     test("remove", () => {
-      const result = removeNote(noteId)
+      const noteQuery = insertNote({
+        text: "first note",
+        questId: noteQuestId
+      })
+      if (!noteQuery.ok) throw new Error(noteQuery.error.code)
+
+      const result = removeNote(noteQuery.value.id)
 
       if (!result.ok) throw new Error(result.error.code)
 
@@ -235,7 +273,13 @@ describe("lifecycles", () => {
     })
 
     test("restore", () => {
-      const result = restoreNote(noteId)
+      const noteQuery = insertNote({
+        text: "first note",
+        questId: noteQuestId
+      })
+      if (!noteQuery.ok) throw new Error(noteQuery.error.code)
+
+      const result = restoreNote(noteQuery.value.id)
 
       if (!result.ok) throw new Error(result.error.code)
 
@@ -243,11 +287,17 @@ describe("lifecycles", () => {
     })
 
     test("delete", () => {
-      const result = deleteNoteById(noteId)
+      const noteQuery = insertNote({
+        text: "first note",
+        questId: noteQuestId
+      })
+      if (!noteQuery.ok) throw new Error(noteQuery.error.code)
+
+      const result = deleteNoteById(noteQuery.value.id)
 
       if (!result.ok) throw new Error(result.error.code)
 
-      expect(result.value).toBe(noteId)
+      expect(result.value).toBe(noteQuery.value.id)
     })
 
     test("get all", () => {
@@ -273,6 +323,26 @@ describe("lifecycles", () => {
       expect(result.value[0]!.createdAt).toBeValidDate()
     })
 
+    test("get searched for notes", () => {
+      insertNote({
+        text: "daily devlog is good"
+      })
+
+      insertNote({
+        text: "random note that shouldn't appear in the test"
+      })
+
+      const result = getNotes({ search: "devlog" })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
+      else console.log("There are no quests in the table.")
+
+      expect(result.value.length).toBe(1)
+      expect(result.value[0]!.text).toContain("devlog")
+    })
+
     test("delete all", () => {
       const result = wipeAllNotesTableRows()
 
@@ -286,24 +356,24 @@ describe("lifecycles", () => {
     let progressId: Progress["id"]
     let progressQuestId: Quest["id"]
 
-    const quest = insertQuest({
-      title: "progress quest",
-      description: "",
-      kind: "main",
-      status: "active"
+    beforeEach(() => {
+      const quest = insertQuest({
+        title: "progress quest",
+        description: "",
+        kind: "main",
+        status: "active"
+      })
+
+      if (!quest.ok) throw new Error("Expected progress quest insert to succeed")
+
+      progressQuestId = quest.value.id
     })
-
-    if (!quest.ok) throw new Error("Expected progress quest insert to succeed")
-
-    progressQuestId = quest.value.id
 
     test("insert", () => {
       const result = insertProgress({
         text: "first progress",
         questId: progressQuestId
       })
-
-      expect(result.ok).toBe(true)
       if (!result.ok) throw new Error(result.error.code)
 
       progressId = result.value.id
@@ -317,13 +387,18 @@ describe("lifecycles", () => {
     })
 
     test("update", () => {
-      const result = updateProgress(db, progressId, {
+      const progressQuery = insertProgress({
+        text: "new progress",
+        questId: progressQuestId
+      })
+      if (!progressQuery.ok) throw new Error(progressQuery.error.code)
+
+      const result = updateProgress(db, progressQuery.value.id, {
         text: "updated progress"
       })
 
       if (!result.ok) throw new Error(result.error.code)
 
-      expect(result.value.id).toBe(progressId)
       expect(result.value.text).toBe("updated progress")
       expect(result.value.questId).toBe(progressQuestId)
     })
@@ -375,6 +450,28 @@ describe("lifecycles", () => {
       expect(result.value[0]!.text).toBeString()
       expect(result.value[0]!.updatedAt).toBeValidDate()
       expect(result.value[0]!.createdAt).toBeValidDate()
+    })
+
+    test("get searched for progresses", () => {
+      insertProgress({
+        questId: progressQuestId,
+        text: "mostly done the base refactoring step"
+      })
+
+      insertProgress({
+        questId: progressQuestId,
+        text: "random progress that shouldn't appear in the test"
+      })
+
+      const result = getProgresses({ search: "refactor" })
+
+      if (!result.ok) throw new Error(result.error.code)
+
+      if (result.value.length > 0) expect(uuidPattern.test(result.value[0]!.id)).toBeTrue()
+      else console.log("There are no quests in the table.")
+
+      expect(result.value.length).toBe(1)
+      expect(result.value[0]!.text).toContain("refactor")
     })
 
     test("delete all", () => {
